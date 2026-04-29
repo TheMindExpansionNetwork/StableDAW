@@ -1,0 +1,2 @@
+from stable_audio_3.pipeline import AutoencoderPipeline as AutoencoderPipeline
+from stable_audio_3.pipeline import StableAudioPipeline as StableAudioPipeline
