@@ -14,7 +14,7 @@ Stable Audio 3 is the next generation of Stable Audio: a focused, streamlined pl
 
 ## Models
 
-| RF Model | Autoencoder | Hardware | Params | Max length | Use case |
+| Model | Autoencoder | Hardware | Params | Max length | Use case |
 |---|---|---|---|---|---|
 | **Stable Audio 3 Small-Music** | SAME-Small | CPU | 433M | 120s | Lightweight music-only inference, no GPU required |
 | **Stable Audio 3 Small-SFX** | SAME-Small | CPU | 433M | 120s | Lightweight sound effects-only inference, no GPU required |
