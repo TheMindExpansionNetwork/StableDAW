@@ -15,16 +15,14 @@ The first argument selects the model to load. Available models:
 
 | Model | Type |
 |---|---|
-| `medium` | ARC |
-| `small-music` | ARC |
-| `small-sfx` | ARC |
-| `medium-rf` | RF |
-| `small-music-rf` | RF |
-| `small-sfx-rf` | RF |
+| `medium` | Post-trained |
+| `small-music` | Post-trained |
+| `small-sfx` | Post-trained |
+| `medium-base` | Base |
+| `small-music-base` | Base |
+| `small-sfx-base` | Base |
 
-For inference, you will want to use ARC models as the RF models are slower and of worse quality. RF models are best used for [LoRA Training](docs/workflows/lora_training.md).
-
-> **Note:** `medium` and `medium-rf` require a CUDA GPU with Flash Attention support.
+> **Note:** `medium` and `medium-base` require a CUDA GPU with Flash Attention support.
 
 ## Text-to-Audio
 The most common usage is generating audio from text
@@ -48,13 +46,11 @@ Overview of the main controls
 
 - **`prompt`** — Text description of the audio to generate (e.g. `"120 BPM house loop"`). For help crafting good prompts, see [Prompt Guide](../guides/prompting.md)
 - **`duration`** — Duration of the generated audio in seconds (default: `120`).
-- **`steps`** — Number of sampling steps (default: `8`). With ARC models, you generally don't want to go higher than 8. For even faster inference, reduce this number, which may reduce audio quality. For RF models, a good default is 50.
+- **`steps`** — Number of sampling steps (default: `8`). For faster inference, reduce this number at some cost to quality. Higher values (e.g. `50`) can improve quality at the cost of speed.
 - **`seed`** - Random seed for reproducible outputs if needed. Use -1 to select a random seed (default) or select your favorite number for deterministic results.
 - **`batch_size`** - Generate multiple at once, useful is you have a GPU and want to get a lot of variations. The max is limited by your GPU's VRAM.
-
-If using an RF model, the following additional controls are available
-- **`cfg_scale`** — Classifier-free guidance scale (default: `1.0` for ARC. Use `7.0` as a good default for RF). Higher values make the output adhere more closely to the prompt; lower values give the model more creative freedom.
-- **`negative_prompt`** — Text description of qualities to avoid in the output. Steers generation away from unwanted characteristics. 
+- **`cfg_scale`** — Classifier-free guidance scale (default: `1.0`; try `7.0` for stronger prompt adherence). Higher values make the output adhere more closely to the prompt; lower values give the model more creative freedom.
+- **`negative_prompt`** — Text description of qualities to avoid in the output. Steers generation away from unwanted characteristics.
 
 ## Audio-To-Audio
 Using init audio, you can edit an existing recording to change the style, genres and mood to create variations. Use the prompt to control the variation.
