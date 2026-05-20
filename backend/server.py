@@ -1,6 +1,5 @@
 import asyncio
 import base64
-import io
 import json
 import shutil
 import subprocess
