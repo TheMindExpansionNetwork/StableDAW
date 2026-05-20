@@ -2,6 +2,8 @@ import asyncio
 import base64
 import io
 import json
+import os
+import logging
 import shutil
 import subprocess
 import tempfile
@@ -35,30 +37,39 @@ app.add_middleware(
 pipeline = None
 sample_rate = 44100
 model_load_error: Optional[str] = None
+model_load_error_detail: Optional[str] = None
+SA3_DEBUG_ERRORS = os.environ.get("SA3_DEBUG_ERRORS", "0") in ("1", "true", "True")
 
 
 @app.on_event("startup")
 async def load_model():
-    global pipeline, sample_rate, model_load_error
+    global pipeline, sample_rate, model_load_error, model_load_error_detail
     from stable_audio_3.model import StableAudioModel
 
-    # Model resolution policy must be configured explicitly by the launch
-    # environment. For local-only resolution, set SA3_LOCAL_ONLY=1 before
-    # starting the server. Leaving it unset preserves the library default.
+    # Default to local-only model resolution for StableDAW backend startup.
+    # Set SA3_LOCAL_ONLY=0 if you explicitly want HF fallback.
+    os.environ.setdefault("SA3_LOCAL_ONLY", "1")
 
     try:
         pipeline = StableAudioModel.from_pretrained("medium")
         sample_rate = pipeline.model_config["sample_rate"]
         model_load_error = None
+        model_load_error_detail = None
     except Exception as e:
         pipeline = None
-        model_load_error = str(e)
+        model_load_error = "MODEL_LOAD_FAILED"
+        model_load_error_detail = str(e)
+        logging.error("Model load failed", exc_info=True)
 
 
 @app.get("/api/health")
 async def health():
     if model_load_error:
-        resp = {"error": model_load_error or "Model not loaded"}
+        resp = {
+            "status": "degraded",
+            "model_loaded": False,
+            "error": model_load_error,
+        }
         if SA3_DEBUG_ERRORS and model_load_error_detail:
             resp["detail"] = model_load_error_detail
         return JSONResponse(resp, status_code=503)
@@ -68,13 +79,10 @@ async def health():
 @app.get("/api/model-info")
 async def model_info():
     if not pipeline:
-        return JSONResponse(
-            {
-                "error": "Model not loaded",
-                "detail": model_load_error,
-            },
-            status_code=503,
-        )
+        resp = {"error": model_load_error or "Model not loaded"}
+        if SA3_DEBUG_ERRORS and model_load_error_detail:
+            resp["detail"] = model_load_error_detail
+        return JSONResponse(resp, status_code=503)
     return {
         "active_model": "medium",
         "available_models": ["medium"],
@@ -150,13 +158,10 @@ async def generate(
     inpaint_audio: Optional[UploadFile] = File(None),
 ):
     if not pipeline:
-        return JSONResponse(
-            {
-                "error": "Model not loaded",
-                "detail": model_load_error,
-            },
-            status_code=503,
-        )
+        resp = {"error": model_load_error or "Model not loaded"}
+        if SA3_DEBUG_ERRORS and model_load_error_detail:
+            resp["detail"] = model_load_error_detail
+        return JSONResponse(resp, status_code=503)
 
     # Build dist_shift object
     dist_shift = None
@@ -318,10 +323,11 @@ async def generate_jobs(
     inpaint_audio: Optional[UploadFile] = File(None),
 ):
     if not pipeline:
-        raise HTTPException(
-            status_code=503,
-            detail=model_load_error or "Model not loaded",
-        )
+        detail = model_load_error or "Model not loaded"
+        if SA3_DEBUG_ERRORS and model_load_error_detail:
+            detail = f"{detail}: {model_load_error_detail}"
+        logging.error(f"/api/generate-jobs failed: {detail}")
+        raise HTTPException(status_code=503, detail=detail)
 
     init_audio_tuple = None
     if init_audio is not None and init_audio.filename:
@@ -374,31 +380,7 @@ async def get_job(job_id: str):
     job = JOBS.get(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    return job
-
-
-@app.get("/api/autoencoder/info")
-async def autoencoder_info():
-    return {"available_autoencoders": [], "loaded_autoencoders": []}
-
-
-@app.post("/api/jobs/train-lora")
-async def train_lora_stub():
-    raise HTTPException(status_code=501, detail="LoRA training not implemented in this backend.")
-
-
-@app.post("/api/jobs/pre-encode")
-async def pre_encode_stub():
-    raise HTTPException(status_code=501, detail="Pre-encode not implemented in this backend.")
-
-
-@app.post("/api/autoencoder/encode")
-async def ae_encode_stub():
-    raise HTTPException(status_code=501, detail="Autoencoder encode not implemented in this backend.")
-
-
-@app.post("/api/autoencoder/decode")
-async def ae_decode_stub():
+    # This endpoint is not implemented for autoencoder decode in this backend
     raise HTTPException(status_code=501, detail="Autoencoder decode not implemented in this backend.")
 
 
