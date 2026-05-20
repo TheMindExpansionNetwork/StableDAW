@@ -624,7 +624,7 @@ async def _stream_claude_persistent(req: ChatRequest, request: Request):
             cwd=PROJECT_CWD,
         )
         _claude_processes[session_id] = process
-        spawned_new = True
+
 
         yield _sse_frame({
             "type": "status",
