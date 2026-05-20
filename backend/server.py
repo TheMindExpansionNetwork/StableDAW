@@ -381,7 +381,9 @@ async def get_job(job_id: str):
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     # This endpoint is not implemented for autoencoder decode in this backend
-    raise HTTPException(status_code=501, detail="Autoencoder decode not implemented in this backend.")
+    raise HTTPException(
+        status_code=501, detail="Autoencoder decode not implemented in this backend."
+    )
 
 
 @app.get("/api/presets")
@@ -499,7 +501,9 @@ def _validate_param(value: float, bounds: tuple[float, float], name: str) -> flo
         raise ValueError(f"Parameter '{name}' must be a number, got: {value!r}")
     lo, hi = bounds
     if val < lo or val > hi:
-        raise ValueError(f"Parameter '{name}' must be between {lo} and {hi}, got: {val}")
+        raise ValueError(
+            f"Parameter '{name}' must be between {lo} and {hi}, got: {val}"
+        )
     return val
 
 
@@ -522,7 +526,9 @@ def _build_filter(effect: str, params: dict[str, float]) -> list[str]:
     elif effect == "compression":
         attack = params["attack"]
         decay = params["decay"]
-        af = f"compand=attacks={attack}:decays={decay}:points=-80/-80|-30/-15|0/-3|20/-1"
+        af = (
+            f"compand=attacks={attack}:decays={decay}:points=-80/-80|-30/-15|0/-3|20/-1"
+        )
         return ["-af", af]
 
     elif effect == "highpass":
@@ -672,7 +678,9 @@ async def studio_process(
     # Validate output format
     allowed_formats = {"wav", "flac", "ogg", "mp3", "aac", "opus"}
     if output_format not in allowed_formats:
-        raise HTTPException(status_code=400, detail=f"Unsupported format: {output_format}")
+        raise HTTPException(
+            status_code=400, detail=f"Unsupported format: {output_format}"
+        )
 
     # Parse and validate params
     try:
@@ -709,8 +717,10 @@ async def studio_process(
 
         # Build FFmpeg command as a list (no shell=True)
         cmd = [
-            "ffmpeg", "-y",
-            "-i", str(input_path),
+            "ffmpeg",
+            "-y",
+            "-i",
+            str(input_path),
             *filter_args,
             str(output_path),
         ]
@@ -746,7 +756,9 @@ async def studio_process(
         return StreamingResponse(
             io.BytesIO(output_bytes),
             media_type=mime_types.get(output_format, "audio/wav"),
-            headers={"Content-Disposition": f'attachment; filename="processed.{output_ext}"'},
+            headers={
+                "Content-Disposition": f'attachment; filename="processed.{output_ext}"'
+            },
         )
 
     finally:

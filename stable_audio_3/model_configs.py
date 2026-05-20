@@ -88,7 +88,11 @@ class ModelConfig:
 
     def resolve(self):
         """Return local paths for config + checkpoint. Prefer SA3_LOCAL_MODELS_DIR if set, else HF Hub."""
-        local_only = os.environ.get("SA3_LOCAL_ONLY", "0").strip().lower() in {"1", "true", "yes"}
+        local_only = os.environ.get("SA3_LOCAL_ONLY", "0").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+        }
         local_config = _local_override(self.repo_id, self.config_path)
         local_ckpt = _local_override(self.repo_id, self.ckpt_path)
 
@@ -100,7 +104,9 @@ class ModelConfig:
             )
 
         if local_config is None:
-            local_config = hf_hub_download(repo_id=self.repo_id, filename=self.config_path)
+            local_config = hf_hub_download(
+                repo_id=self.repo_id, filename=self.config_path
+            )
         if local_ckpt is None:
             local_ckpt = hf_hub_download(repo_id=self.repo_id, filename=self.ckpt_path)
         return local_config, local_ckpt
