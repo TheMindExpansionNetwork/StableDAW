@@ -2,6 +2,7 @@ import asyncio
 import base64
 import io
 import json
+import os
 import shutil
 import subprocess
 import tempfile
@@ -34,26 +35,51 @@ app.add_middleware(
 
 pipeline = None
 sample_rate = 44100
+model_load_error: Optional[str] = None
 
 
 @app.on_event("startup")
 async def load_model():
-    global pipeline, sample_rate
+    global pipeline, sample_rate, model_load_error
     from stable_audio_3.model import StableAudioModel
 
-    pipeline = StableAudioModel.from_pretrained("medium")
-    sample_rate = pipeline.model_config["sample_rate"]
+    # Default to local-only model resolution for StableDAW backend startup.
+    # Set SA3_LOCAL_ONLY=0 if you explicitly want HF fallback.
+    os.environ.setdefault("SA3_LOCAL_ONLY", "1")
+
+    try:
+        pipeline = StableAudioModel.from_pretrained("medium")
+        sample_rate = pipeline.model_config["sample_rate"]
+        model_load_error = None
+    except Exception as e:
+        pipeline = None
+        model_load_error = str(e)
 
 
 @app.get("/api/health")
 async def health():
+    if model_load_error:
+        return JSONResponse(
+            {
+                "status": "degraded",
+                "model_loaded": False,
+                "error": model_load_error,
+            },
+            status_code=503,
+        )
     return {"status": "ok", "model_loaded": pipeline is not None}
 
 
 @app.get("/api/model-info")
 async def model_info():
     if not pipeline:
-        return JSONResponse({"error": "Model not loaded"}, status_code=503)
+        return JSONResponse(
+            {
+                "error": "Model not loaded",
+                "detail": model_load_error,
+            },
+            status_code=503,
+        )
     return {
         "active_model": "medium",
         "available_models": ["medium"],
@@ -129,7 +155,13 @@ async def generate(
     inpaint_audio: Optional[UploadFile] = File(None),
 ):
     if not pipeline:
-        return JSONResponse({"error": "Model not loaded"}, status_code=503)
+        return JSONResponse(
+            {
+                "error": "Model not loaded",
+                "detail": model_load_error,
+            },
+            status_code=503,
+        )
 
     # Build dist_shift object
     dist_shift = None
@@ -291,7 +323,10 @@ async def generate_jobs(
     inpaint_audio: Optional[UploadFile] = File(None),
 ):
     if not pipeline:
-        raise HTTPException(status_code=503, detail="Model not loaded")
+        raise HTTPException(
+            status_code=503,
+            detail=model_load_error or "Model not loaded",
+        )
 
     init_audio_tuple = None
     if init_audio is not None and init_audio.filename:

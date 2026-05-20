@@ -194,7 +194,7 @@ LibraryView  ── (local React state, no fetch calls)
 ```
 ┌──────────────────┐   GET /         ┌──────────────────────────────┐
 │      Browser     │ ──────────────▶ │ FastAPI app (uvicorn)        │
-│   localhost:8420 │                 │  - mounts frontend/dist at / │
+│   localhost:8600 │                 │  - mounts frontend/dist at / │
 │                  │ ──fetch /api/*▶ │  - exposes /api/*            │
 └──────────────────┘                 └──────────────────────────────┘
 ```
