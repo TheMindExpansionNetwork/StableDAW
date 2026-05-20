@@ -58,14 +58,10 @@ async def load_model():
 @app.get("/api/health")
 async def health():
     if model_load_error:
-        return JSONResponse(
-            {
-                "status": "degraded",
-                "model_loaded": False,
-                "error": model_load_error,
-            },
-            status_code=503,
-        )
+        resp = {"error": model_load_error or "Model not loaded"}
+        if SA3_DEBUG_ERRORS and model_load_error_detail:
+            resp["detail"] = model_load_error_detail
+        return JSONResponse(resp, status_code=503)
     return {"status": "ok", "model_loaded": pipeline is not None}
 
 
