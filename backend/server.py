@@ -43,9 +43,9 @@ async def load_model():
     global pipeline, sample_rate, model_load_error
     from stable_audio_3.model import StableAudioModel
 
-    # Default to local-only model resolution for StableDAW backend startup.
-    # Set SA3_LOCAL_ONLY=0 if you explicitly want HF fallback.
-    os.environ.setdefault("SA3_LOCAL_ONLY", "1")
+    # Model resolution policy must be configured explicitly by the launch
+    # environment. For local-only resolution, set SA3_LOCAL_ONLY=1 before
+    # starting the server. Leaving it unset preserves the library default.
 
     try:
         pipeline = StableAudioModel.from_pretrained("medium")
