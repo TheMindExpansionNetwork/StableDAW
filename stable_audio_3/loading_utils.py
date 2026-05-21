@@ -100,16 +100,16 @@ def load_diffusion_cond(
 ):
     import time as _time
     t0 = _time.perf_counter()
-    print(f"[LOAD] Building model graph from config...")
+    print("[LOAD] Building model graph from config...")
     model = create_diffusion_cond_from_config(model_config)
     print(f"[LOAD] Loading checkpoint: {ckpt_path}")
     state_dict = load_ckpt_state_dict(ckpt_path)
-    print(f"[LOAD] Applying weights to model...")
+    print("[LOAD] Applying weights to model...")
     copy_state_dict(model, state_dict)
     print(f"[LOAD] Moving model to {device}...")
     model.to(device).eval().requires_grad_(False)
     if model_half:
-        print(f"[LOAD] Converting to float16...")
+        print("[LOAD] Converting to float16...")
         model.to(torch.float16)
     elapsed = _time.perf_counter() - t0
     print(f"[LOAD] Model ready in {elapsed:.1f}s")
