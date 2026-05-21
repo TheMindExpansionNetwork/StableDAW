@@ -1,5 +1,9 @@
 # Local tools
 codegraph/
+.codegraph/
+
+# Secrets
+data/api_key_pools.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
