@@ -19,7 +19,7 @@ timeout /t 1 /nobreak >nul
 
 :: Start the backend API server (port 8600)
 echo [1/2] Starting backend API server on port 8600...
-start "SA3 Backend" cmd /k "cd /d %~dp0 && .venv\Scripts\activate && uvicorn backend.server:app --host 0.0.0.0 --port 8600 --reload"
+start "SA3 Backend" cmd /k "cd /d %~dp0 && .venv\Scripts\activate && python -m backend.run"
 
 :: Give backend a moment to bind
 timeout /t 3 /nobreak >nul

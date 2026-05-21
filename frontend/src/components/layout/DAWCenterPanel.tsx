@@ -7,8 +7,10 @@ import { DetailsView } from './DetailsView';
 import { MediaBucketView } from './MediaBucketView';
 import {
   Scissors, Layers, Activity, GripHorizontal, ChevronDown, ChevronUp,
-  Info, Piano, FolderOpen,
+  Info, Piano, FolderOpen, Sliders, Zap,
 } from 'lucide-react';
+import { AdvancedView } from '../../views/AdvancedView';
+import { AdvancedEditorPanel } from '../../views/AdvancedEditorPanel';
 import { useBottomPanelStore, type BottomPanelTab } from '../../state/bottomPanelStore';
 
 const TAB_DEFS: Array<{ id: BottomPanelTab; label: string; icon: React.ComponentType<{ className?: string }>; colorActive: string }> = [
@@ -20,7 +22,7 @@ const TAB_DEFS: Array<{ id: BottomPanelTab; label: string; icon: React.Component
 
 export const DAWCenterPanel: React.FC = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [workspaceMode, setWorkspaceMode] = useState<'editor' | 'sequencer'>('editor');
+  const [workspaceMode, setWorkspaceMode] = useState<'editor' | 'sequencer' | 'advanced' | 'effects'>('editor');
   const [bottomHeight, setBottomHeight] = useState(260);
   const [isResizing, setIsResizing] = useState(false);
   const isBottomOpen = useBottomPanelStore((s) => s.isOpen);
@@ -82,11 +84,30 @@ export const DAWCenterPanel: React.FC = () => {
               <Layers className="w-3.5 h-3.5" />
               <span className="text-[10px] font-black uppercase tracking-widest">Step Sequencer</span>
            </button>
+           <button
+             onClick={() => setWorkspaceMode('advanced')}
+             className={`flex items-center gap-2 px-3 py-1.5 rounded transition-all border
+               ${workspaceMode === 'advanced' ? 'bg-rose-600/20 border-rose-500/50 text-white' : 'border-white/5 text-zinc-500 hover:text-zinc-300'}`}
+           >
+              <Sliders className="w-3.5 h-3.5" />
+              <span className="text-[10px] font-black uppercase tracking-widest">Advanced</span>
+           </button>
+           <button
+             onClick={() => setWorkspaceMode('effects')}
+             className={`flex items-center gap-2 px-3 py-1.5 rounded transition-all border
+               ${workspaceMode === 'effects' ? 'bg-orange-600/20 border-orange-500/50 text-white' : 'border-white/5 text-zinc-500 hover:text-zinc-300'}`}
+           >
+              <Zap className="w-3.5 h-3.5" />
+              <span className="text-[10px] font-black uppercase tracking-widest">Effects</span>
+           </button>
         </div>
 
         {/* Timeline body */}
         <div className="flex-1 min-h-0 relative">
-           {workspaceMode === 'editor' ? <WaveformEditor /> : <StepSequencer />}
+           {workspaceMode === 'editor' && <WaveformEditor />}
+           {workspaceMode === 'sequencer' && <StepSequencer />}
+           {workspaceMode === 'advanced' && <div className="absolute inset-0 overflow-hidden"><AdvancedView /></div>}
+           {workspaceMode === 'effects' && <div className="absolute inset-0 overflow-y-auto"><AdvancedEditorPanel /></div>}
         </div>
       </div>
 

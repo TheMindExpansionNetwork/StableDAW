@@ -156,10 +156,11 @@ class NumberConditioner(Conditioner):
 
 class T5GemmaConditioner(Conditioner):
 
-    T5GEMMA_MODELS = ["google/t5gemma-b-b-ul2"]
+    T5GEMMA_MODELS = ["google/t5gemma-b-b-ul2", "stabilityai/t5gemma-b-b-ul2"]
 
     T5GEMMA_MODEL_DIMS = {
         "google/t5gemma-b-b-ul2": 768,
+        "stabilityai/t5gemma-b-b-ul2": 768,
     }
 
     def __init__(
@@ -199,6 +200,7 @@ class T5GemmaConditioner(Conditioner):
                 from transformers import T5GemmaEncoderModel, AutoTokenizer, AutoConfig
                 logging.info(f"Loading T5Gemma tokenizer and model from: {load_from}")
                 hf_kwargs = {"subfolder": subfolder} if subfolder else {}
+                hf_kwargs["local_files_only"] = True
                 self.tokenizer = AutoTokenizer.from_pretrained(load_from, **hf_kwargs)
                 config = AutoConfig.from_pretrained(load_from, **hf_kwargs)
                 config.is_encoder_decoder = False
