@@ -220,7 +220,7 @@ class StableAudioPipeline:
         )
 
         # Encode conditioning
-        print(f"[PIPELINE] Encoding text conditioning...")
+        print("[PIPELINE] Encoding text conditioning...")
         if conditioning_tensors is None:
             conditioning_tensors = self.model.conditioner(conditioning, device)
         if (
@@ -236,7 +236,7 @@ class StableAudioPipeline:
 
         # Process init audio
         if init_audio is not None:
-            print(f"[PIPELINE] Encoding init audio...")
+            print("[PIPELINE] Encoding init audio...")
             init_audio, inpaint_mask = self._encode_audio_input(
                 init_audio, audio_sample_size, inpaint_mask
             )
@@ -244,7 +244,7 @@ class StableAudioPipeline:
 
         # Process inpaint audio
         if inpaint_audio is not None:
-            print(f"[PIPELINE] Encoding inpaint audio...")
+            print("[PIPELINE] Encoding inpaint audio...")
             inpaint_audio, inpaint_mask = self._encode_audio_input(
                 inpaint_audio, audio_sample_size, inpaint_mask
             )
