@@ -25,6 +25,7 @@ from pydantic import BaseModel
 try:
     from backend.key_pool import _key_id, key_pool
 except ModuleNotFoundError:
+
     def _key_id(key: Optional[str]) -> str:
         if not key:
             return "missing"
