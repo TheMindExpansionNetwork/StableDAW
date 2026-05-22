@@ -248,7 +248,9 @@ async def generate(
             generate_args["inpaint_mask_end_seconds"] = mask_end
 
     if pipeline is None:
-        return JSONResponse({"error": model_load_error or "Model not loaded"}, status_code=503)
+        return JSONResponse(
+            {"error": model_load_error or "Model not loaded"}, status_code=503
+        )
 
     audio = pipeline.generate(**generate_args)
     audio = audio.float().clamp(-1, 1).squeeze(0).cpu()
