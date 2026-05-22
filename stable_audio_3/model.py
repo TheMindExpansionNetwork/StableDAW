@@ -11,8 +11,6 @@ from stable_audio_3.loading_utils import load_autoencoder, load_diffusion_cond
 from stable_audio_3.model_configs import ae_models, all_models
 from stable_audio_3.models.lora import (
     load_and_apply_loras,
-)
-from stable_audio_3.models.lora import (
     set_lora_strength as _set_lora_strength,
 )
 
