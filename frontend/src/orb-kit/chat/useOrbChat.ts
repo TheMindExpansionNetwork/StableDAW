@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import type { ModelInfo } from '../ProviderModelSelector';
 import { handleStableDAWAction, type AssistantActionPayload } from '../actionHandlers';
+import { uuid } from '../utils';
 
 // ---------------------------------------------------------------------------
 // Action tag parsing — extracts <action>{...}</action> from LLM text
@@ -259,7 +260,7 @@ export function useOrbChat(config: OrbChatConfig = {}): OrbChatState {
         setAttachments(prev => [
             ...prev,
             ...files.map(f => ({
-                id: crypto.randomUUID(),
+                id: uuid(),
                 name: f.name,
                 mime: f.type || 'application/octet-stream',
                 size: f.size,
@@ -289,7 +290,7 @@ export function useOrbChat(config: OrbChatConfig = {}): OrbChatState {
         }
 
         const userMsg: OrbChatMessage = {
-            id: crypto.randomUUID(),
+            id: uuid(),
             role: 'user',
             content: content.trim(),
             timestamp: new Date(),
@@ -308,7 +309,7 @@ export function useOrbChat(config: OrbChatConfig = {}): OrbChatState {
         }
         // Clear attachments immediately so UI resets before the network round-trip
         setAttachments([]);
-        const assistantId = crypto.randomUUID();
+        const assistantId = uuid();
         const assistantMsg: OrbChatMessage = {
             id: assistantId,
             role: 'assistant',
@@ -416,7 +417,15 @@ export function useOrbChat(config: OrbChatConfig = {}): OrbChatState {
                             const name = event.name || event.function?.name || 'tool';
                             setStatusText(`Using ${name}...`);
                         } else if (event.type === 'status') {
-                            setStatusText(event.message);
+                            const raw = event.message || '';
+                            const friendly = raw.startsWith('spawned') ? 'Connecting...'
+                                : raw.startsWith('thinking') ? 'Thinking...'
+                                : raw.startsWith('restarting') ? 'Restarting...'
+                                : raw.includes('session initialized') ? 'Ready'
+                                : raw.startsWith('Connecting') ? raw.replace(/\s*\(.*\)/, '')
+                                : raw.startsWith('Key rate') ? 'Retrying...'
+                                : raw;
+                            setStatusText(friendly);
                         } else if (event.type === 'error') {
                             setMessages(prev => prev.map(m =>
                                 m.id === assistantId ? { ...m, content: event.error, isError: true, isStreaming: false } : m

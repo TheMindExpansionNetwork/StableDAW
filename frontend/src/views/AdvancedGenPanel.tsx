@@ -3,6 +3,7 @@ import {
   Play, Pause, Square, RefreshCw, X, Plus,
   Music, Scissors, Mic2, Search, ChevronDown,
   LayoutList, Grid3x3, AudioWaveform, Volume2, Sliders,
+  Wand2, Loader2, Save, BookOpen,
 } from 'lucide-react';
 import { useGenerateParamsStore, GenerateParamsState } from '../state/generateParamsStore';
 import { useGenerateStore } from '../state/generateStore';
@@ -10,8 +11,11 @@ import { useLibraryStore } from '../state/libraryStore';
 import { useAdvancedEditorSourceStore } from '../state/advancedEditorStore';
 import { useEditorStore } from '../state/editorStore';
 import { WaveformPreview } from '../components/audio/WaveformPreview';
+import { uuid } from '../orb-kit/utils';
 import { HoverTip, InfoTip } from '../components/ui/Tooltip';
 import { RICH_TOOLTIPS, HOVER_TOOLTIPS } from '../components/ui/tooltips';
+import { GENERATION_PRESETS, type GenerationPreset } from '../data/generationPresets';
+import { enhanceStableAudioPrompt } from '../orb-kit/promptEnhancer';
 
 /* ── SField: label / slider / number / default ────────────────────── */
 function SField({ label, value, onChange, min, max, step = 0.01, hint, defaultValue, tipKey }: {
@@ -206,7 +210,7 @@ function TemplatesPanel() {
       fileFormat: p.fileFormat, fileNaming: p.fileNaming, cutToDuration: p.cutToDuration,
       autoplay: p.autoplay, autoDownload: p.autoDownload,
     };
-    setTemplates([{ id: crypto.randomUUID(), name: name.trim(), createdAt: new Date().toISOString(), params }, ...templates]);
+    setTemplates([{ id: uuid(), name: name.trim(), createdAt: new Date().toISOString(), params }, ...templates]);
   };
   const filtered = templates.filter((t) => t.name.toLowerCase().includes(searchQuery.toLowerCase()));
   return (
@@ -264,6 +268,17 @@ export const AdvancedGenPanel: React.FC<{
   const initRef = useRef<HTMLInputElement>(null);
   const inpaintRef = useRef<HTMLInputElement>(null);
 
+  // Prompt enhance state
+  const [enhancingPositive, setEnhancingPositive] = useState(false);
+  const [enhancingNegative, setEnhancingNegative] = useState(false);
+
+  // Presets dropdown
+  const [presetsOpen, setPresetsOpen] = useState(false);
+  const applyPreset = useCallback((preset: GenerationPreset) => {
+    patch(preset.params);
+    setPresetsOpen(false);
+  }, [patch]);
+
   // Spectrogram state
   const [spectrograms, setSpectrograms] = useState<{mel:string,stft:string,chromagram:string,cqt:string}|null>(null);
   const [specTab, setSpecTab] = useState<'mel'|'stft'|'chromagram'|'cqt'>('mel');
@@ -279,21 +294,12 @@ export const AdvancedGenPanel: React.FC<{
         const audioRes = await fetch(lastAudioUrl);
         if (!audioRes.ok) throw new Error(`audio fetch failed: ${audioRes.status}`);
         const blob = await audioRes.blob();
-        const b64: string = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => {
-            const result = reader.result as string;
-            const b64part = result.includes(',') ? result.split(',')[1] : result;
-            resolve(b64part);
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
-        });
         if (cancelled) return;
+        const form = new FormData();
+        form.append('audio_file', blob, 'output.wav');
         const res = await fetch('/api/spectrogram', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ audio_base64: b64, mime_type: blob.type || 'audio/wav', sample_rate: 44100 }),
+          body: form,
           signal: AbortSignal.timeout(30000),
         });
         if (!res.ok) throw new Error(`/api/spectrogram ${res.status}`);
@@ -354,53 +360,111 @@ export const AdvancedGenPanel: React.FC<{
     setEditorSource(new File([blob], lastFilename || 'output.wav', { type: blob.type }));
   };
 
-  const handleQuickAction = (target: 'timeline' | 'editor' | 'sequencer' | 'newTrack') => {
-    if (onAddTo) { onAddTo(target); return; }
-    if (target === 'timeline' || target === 'newTrack') { void handleSendToDaw(); return; }
-    if (target === 'editor') { void handleSendToEditor(); return; }
-    console.log('addTo:', target);
+  const handleSendToInit = async () => {
+    if (!lastAudioUrl) return;
+    const blob = await (await fetch(lastAudioUrl)).blob();
+    const file = new File([blob], lastFilename || 'output.wav', { type: blob.type || 'audio/wav' });
+    patch({ initAudioFile: file, initAudioEnabled: true });
+  };
+
+  const handleSendToInpaint = async () => {
+    if (!lastAudioUrl) return;
+    const blob = await (await fetch(lastAudioUrl)).blob();
+    const file = new File([blob], lastFilename || 'output.wav', { type: blob.type || 'audio/wav' });
+    patch({ inpaintAudioFile: file, inpaintEnabled: true, maskStart: 0, maskEnd: 0 });
+  };
+
+  type QuickTarget = 'daw' | 'init' | 'inpaint' | 'effects';
+  const handleQuickAction = (target: QuickTarget) => {
+    if (target === 'daw') { void handleSendToDaw(); return; }
+    if (target === 'init') { void handleSendToInit(); return; }
+    if (target === 'inpaint') { void handleSendToInpaint(); return; }
+    if (target === 'effects' && onAddTo) { onAddTo('editor'); return; }
   };
 
   /* ────────────────────────────────────────────────────────────────── */
 
   return (
-    <div className="h-full overflow-y-auto text-[11px]">
-    <div className="max-w-[1700px] mx-auto p-2 flex flex-col gap-2">
+    <div className="h-full overflow-hidden text-[11px]">
+    <div className="h-full grid grid-cols-[1fr_280px] gap-2 p-2">
+
+      {/* ═══ LEFT MAIN COLUMN ═══ */}
+      <div className="overflow-y-auto flex flex-col gap-2 pr-1">
 
       {/* ═══ ROW 1: PROMPTING | TEMPLATES+LORA | CONTROLS+GENERATE | OUTPUT SETTINGS ═══ */}
       <div className="grid grid-cols-[1.4fr_220px_280px_240px] gap-2">
 
-        {/* PROMPTING (Prompt + Negative stacked) */}
+        {/* PROMPTING (Prompt + Negative SIDE BY SIDE) */}
         <div className="hardware-card flex flex-col">
           <span className="text-[10px] font-black uppercase tracking-widest text-purple-300 mb-2">PROMPTING</span>
-          <div className="flex flex-col mb-2">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[11px] text-zinc-300 flex items-center gap-1.5">Prompt <InfoTip {...RICH_TOOLTIPS.prompt} /></span>
-              <SavedPromptsDropdown type="positive" value={p.prompt} onChange={(v) => sf('prompt', v)} />
+          <div className="grid grid-cols-2 gap-3 flex-1">
+            {/* Prompt */}
+            <div className="flex flex-col">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[11px] text-zinc-300 flex items-center gap-1.5">Prompt <InfoTip {...RICH_TOOLTIPS.prompt} /></span>
+                <div className="flex items-center gap-1.5">
+                  <SavedPromptsDropdown type="positive" value={p.prompt} onChange={(v) => sf('prompt', v)} />
+                  <button
+                    onClick={async () => {
+                      if (enhancingPositive || !p.prompt.trim()) return;
+                      setEnhancingPositive(true);
+                      try {
+                        const result = await enhanceStableAudioPrompt({ target: 'positive', positivePrompt: p.prompt, negativePrompt: p.negativePrompt });
+                        if (result) sf('prompt', result);
+                      } catch { /* non-fatal */ }
+                      finally { setEnhancingPositive(false); }
+                    }}
+                    disabled={enhancingPositive || !p.prompt.trim()}
+                    className="p-1 rounded hover:bg-purple-500/20 text-zinc-500 hover:text-purple-300 transition-colors disabled:opacity-30"
+                    title="AI-enhance prompt"
+                  >
+                    {enhancingPositive ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              </div>
+              <div className="relative flex-1">
+                <textarea
+                  className="compact-input w-full resize-none h-full min-h-[80px]"
+                  placeholder="120 BPM house loop, deep sub bass, crispy hi-hats, minimal percussion..."
+                  value={p.prompt}
+                  onChange={(e) => sf('prompt', e.target.value)}
+                  maxLength={1000} />
+                <span className="absolute bottom-1 right-2 text-[9px] text-zinc-500">{p.prompt.length}/1000</span>
+              </div>
             </div>
-            <div className="relative">
-              <textarea
-                className="compact-input w-full resize-none h-[60px]"
-                placeholder="120 BPM house loop, deep sub bass, crispy hi-hats..."
-                value={p.prompt}
-                onChange={(e) => sf('prompt', e.target.value)}
-                maxLength={1000} />
-              <span className="absolute bottom-1 right-2 text-[9px] text-zinc-500">{p.prompt.length}/1000</span>
-            </div>
-          </div>
-          <div className="flex flex-col">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[11px] text-zinc-300 flex items-center gap-1.5">Negative Prompt <InfoTip {...RICH_TOOLTIPS.negativePrompt} /></span>
-              <SavedPromptsDropdown type="negative" value={p.negativePrompt} onChange={(v) => sf('negativePrompt', v)} />
-            </div>
-            <div className="relative">
-              <textarea
-                className="compact-input w-full resize-none h-[48px]"
-                placeholder="vocals, speech, distortion..."
-                value={p.negativePrompt}
-                onChange={(e) => sf('negativePrompt', e.target.value)}
-                maxLength={500} />
-              <span className="absolute bottom-1 right-2 text-[9px] text-zinc-500">{p.negativePrompt.length}/500</span>
+            {/* Negative Prompt */}
+            <div className="flex flex-col">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[11px] text-zinc-300 flex items-center gap-1.5">Negative Prompt <InfoTip {...RICH_TOOLTIPS.negativePrompt} /></span>
+                <div className="flex items-center gap-1.5">
+                  <SavedPromptsDropdown type="negative" value={p.negativePrompt} onChange={(v) => sf('negativePrompt', v)} />
+                  <button
+                    onClick={async () => {
+                      if (enhancingNegative || !p.negativePrompt.trim()) return;
+                      setEnhancingNegative(true);
+                      try {
+                        const result = await enhanceStableAudioPrompt({ target: 'negative', positivePrompt: p.prompt, negativePrompt: p.negativePrompt });
+                        if (result) sf('negativePrompt', result);
+                      } catch { /* non-fatal */ }
+                      finally { setEnhancingNegative(false); }
+                    }}
+                    disabled={enhancingNegative || !p.negativePrompt.trim()}
+                    className="p-1 rounded hover:bg-purple-500/20 text-zinc-500 hover:text-purple-300 transition-colors disabled:opacity-30"
+                    title="AI-enhance negative prompt"
+                  >
+                    {enhancingNegative ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              </div>
+              <div className="relative flex-1">
+                <textarea
+                  className="compact-input w-full resize-none h-full min-h-[80px]"
+                  placeholder="vocals, speech, distortion, harshness..."
+                  value={p.negativePrompt}
+                  onChange={(e) => sf('negativePrompt', e.target.value)}
+                  maxLength={500} />
+                <span className="absolute bottom-1 right-2 text-[9px] text-zinc-500">{p.negativePrompt.length}/500</span>
+              </div>
             </div>
           </div>
         </div>
@@ -441,6 +505,19 @@ export const AdvancedGenPanel: React.FC<{
         <div className="hardware-card flex flex-col">
           <span className="text-[10px] font-black uppercase tracking-widest text-purple-300 mb-2">CONTROLS</span>
           <div className="flex flex-col gap-1.5 mb-2">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-zinc-300 w-16 shrink-0">Model</span>
+              <select className="compact-input flex-1" value={p.model} onChange={(e) => {
+                const m = e.target.value;
+                const isRf = m.endsWith('-rf');
+                patch({ model: m, steps: isRf ? 50 : 8, cfg: isRf ? 7.0 : 1.0 });
+              }}>
+                <option value="small">Small (ARC)</option>
+                <option value="medium">Medium (ARC)</option>
+                <option value="small-rf">Small-RF</option>
+                <option value="medium-rf">Medium-RF</option>
+              </select>
+            </div>
             <CtrlRow label="Duration" value={p.duration} onChange={(v) => sf('duration', v)} min={0.5} max={512} step={0.5} suffix="s" tipKey="duration" />
             <CtrlRow label="Steps" value={p.steps} onChange={(v) => sf('steps', v)} min={1} max={500} step={1} tipKey="steps" />
             <CtrlRow label="CFG" value={p.cfg} onChange={(v) => sf('cfg', v)} min={0} max={25} step={0.1} tipKey="cfg" />
@@ -647,8 +724,39 @@ export const AdvancedGenPanel: React.FC<{
         </div>
       </div>
 
-      {/* ═══ ROW 4: OUTPUT | SPECTROGRAM | QUICK ACTIONS ═══ */}
-      <div className="grid grid-cols-[1.4fr_1fr_180px] gap-2">
+      </div>{/* end LEFT MAIN COLUMN */}
+
+      {/* ═══ RIGHT SIDEBAR: OUTPUT | SPECTROGRAM | QUICK ACTIONS ═══ */}
+      <div className="overflow-y-auto flex flex-col gap-2">
+
+        {/* PRESETS DROPDOWN */}
+        <div className="relative">
+          <button
+            onClick={() => setPresetsOpen(!presetsOpen)}
+            className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded border border-white/10 bg-white/5 hover:bg-purple-500/15 hover:border-purple-500/30 text-zinc-300 hover:text-white transition-colors"
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            <span className="text-[10px] font-black uppercase tracking-widest">Presets</span>
+            <ChevronDown className={`w-3 h-3 transition-transform ${presetsOpen ? 'rotate-180' : ''}`} />
+          </button>
+          {presetsOpen && (
+            <div className="absolute left-0 top-full mt-1 z-50 w-full max-h-80 overflow-y-auto rounded border border-white/10 bg-[#0c0a12] shadow-2xl">
+              {GENERATION_PRESETS.map((preset) => (
+                <button
+                  key={preset.id}
+                  onClick={() => applyPreset(preset)}
+                  className="w-full text-left px-3 py-2 hover:bg-purple-500/15 border-b border-white/5 last:border-0 transition-colors group"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: preset.color }} />
+                    <span className="text-[11px] font-bold text-zinc-200 group-hover:text-white">{preset.name}</span>
+                  </div>
+                  <p className="text-[9px] text-zinc-500 mt-0.5 leading-tight pl-4">{preset.description}</p>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* OUTPUT */}
         <div className="hardware-card flex flex-col">
@@ -712,15 +820,16 @@ export const AdvancedGenPanel: React.FC<{
         <div className="hardware-card flex flex-col">
           <span className="text-[10px] font-black uppercase tracking-widest text-purple-300 mb-2">QUICK ACTIONS</span>
           <div className="flex flex-col gap-1.5">
-            {[
-              { label: 'Timeline', icon: LayoutList, target: 'timeline' as const },
-              { label: 'Editor', icon: AudioWaveform, target: 'editor' as const },
-              { label: 'Step Sequencer', icon: Grid3x3, target: 'sequencer' as const },
-              { label: 'New Track', icon: Plus, target: 'newTrack' as const },
-            ].map(({ label, icon: Icon, target }) => (
+            {([
+              { label: 'DAW', icon: LayoutList, target: 'daw' as QuickTarget, desc: 'Send to timeline as new track' },
+              { label: 'Init', icon: Mic2, target: 'init' as QuickTarget, desc: 'Load into Init Audio module' },
+              { label: 'Inpaint', icon: Scissors, target: 'inpaint' as QuickTarget, desc: 'Load into Inpainting module' },
+              { label: 'Effects', icon: Sliders, target: 'effects' as QuickTarget, desc: 'Send to Effects tab' },
+            ] as const).map(({ label, icon: Icon, target, desc }) => (
               <button key={label}
                 disabled={!lastAudioUrl}
                 onClick={() => handleQuickAction(target)}
+                title={desc}
                 className={`group flex items-center gap-2 px-2 py-1.5 rounded border transition-all
                   ${lastAudioUrl
                     ? 'border-purple-900/40 bg-purple-950/20 hover:bg-purple-900/30 hover:border-purple-700/50 cursor-pointer'
@@ -731,7 +840,7 @@ export const AdvancedGenPanel: React.FC<{
             ))}
           </div>
         </div>
-      </div>
+      </div>{/* end RIGHT SIDEBAR */}
 
     </div>
     </div>

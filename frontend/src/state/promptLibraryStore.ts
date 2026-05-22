@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { uuid } from '../orb-kit/utils';
 
 export interface SavedPrompt {
   id: string;
@@ -26,7 +27,7 @@ export const usePromptLibraryStore = create<PromptLibraryState>()(
       prompts: [],
       searchQuery: '',
       save: (p) => set((s) => ({
-        prompts: [{ ...p, id: crypto.randomUUID(), createdAt: new Date().toISOString() }, ...s.prompts],
+        prompts: [{ ...p, id: uuid(), createdAt: new Date().toISOString() }, ...s.prompts],
       })),
       remove: (id) => set((s) => ({ prompts: s.prompts.filter((x) => x.id !== id) })),
       update: (id, updates) => set((s) => ({

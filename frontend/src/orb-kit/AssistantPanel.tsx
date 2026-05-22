@@ -5,6 +5,7 @@ import remarkGfm from 'remark-gfm';
 import { ProviderModelSelector, type ModelInfo } from './ProviderModelSelector';
 import { actionFromAssistantEvent, statusFromAssistantEvent } from './assistantEvents';
 import { buildStableDAWAppContext } from './appContext';
+import { uuid } from './utils';
 
 // Inline clipboard helper (no external util available in StableDAW)
 const copyToClipboard = (text: string) => navigator.clipboard.writeText(text).catch(() => {});
@@ -208,7 +209,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({
         setAttachments(prev => [
             ...prev,
             ...files.map(file => ({
-                id: crypto.randomUUID(),
+                id: uuid(),
                 file,
                 name: file.name,
                 mime: file.type || 'application/octet-stream',
@@ -501,7 +502,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({
         });
 
         const userMessage: Message = {
-            id: crypto.randomUUID(),
+            id: uuid(),
             role: 'user',
             content: `${promptText}${attachmentSummary}`,
             timestamp: new Date()
@@ -511,7 +512,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({
         setIsProcessing(true);
 
         // Create placeholder assistant message for streaming
-        const assistantId = crypto.randomUUID();
+        const assistantId = uuid();
         const assistantMessage: Message = {
             id: assistantId,
             role: 'assistant',
@@ -1006,7 +1007,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({
                                                                 m.id === msg.id ? { ...m, pendingAction: undefined } : m
                                                             );
                                                             return [...updated, {
-                                                                id: crypto.randomUUID(),
+                                                                id: uuid(),
                                                                 role: 'assistant' as const,
                                                                 content: 'Action "' + msg.pendingAction!.type + '" has been executed.',
                                                                 timestamp: new Date(),

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { uuid } from '../orb-kit/utils';
 
 export const EFFECT_CATEGORIES: Record<string, string[]> = {
   'Dynamics': ['compression', 'volume', 'loudnorm', 'mastering_chain'],
@@ -90,7 +91,7 @@ export const useEffectChainStore = create<EffectChainState>()(
       chain: [],
       addEffect: (effect) =>
         set((s) => ({
-          chain: [...s.chain, { id: crypto.randomUUID(), effect, params: { ...(EFFECT_DEFAULTS[effect] || {}) }, enabled: true }],
+          chain: [...s.chain, { id: uuid(), effect, params: { ...(EFFECT_DEFAULTS[effect] || {}) }, enabled: true }],
         })),
       removeEffect: (id) => set((s) => ({ chain: s.chain.filter((e) => e.id !== id) })),
       updateParams: (id, params) =>

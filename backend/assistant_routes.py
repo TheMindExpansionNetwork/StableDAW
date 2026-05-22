@@ -276,6 +276,7 @@ class ChatRequest(BaseModel):
     attachments: Optional[List[ChatAttachment]] = None
     staged_attachments: Optional[list] = None  # internal; set by chat_stream before routing
     skill_bootstrap_session_id: Optional[str] = None  # internal; set when Claude gets repo skill context
+    claude_resume_existing: bool = False  # internal; true when browser supplied an existing session id
 
 
 # ---------------------------------------------------------------------------
@@ -612,17 +613,15 @@ def _parse_claude_event(data: dict) -> list[dict]:
         return _parse_claude_event(data["event"])
 
     if msg_type == "assistant":
-        # Full assistant message with content blocks
+        # Full/partial assistant message — text was already streamed via
+        # content_block_delta, so only extract tool_use blocks here to
+        # avoid doubling the displayed text.
         message = data.get("message", data)
         content_blocks = message.get("content", data.get("content", []))
         for block in content_blocks:
             if not isinstance(block, dict):
                 continue
-            if block.get("type") == "text":
-                text = block.get("text", "")
-                if text:
-                    frames.append({"type": "text_delta", "delta": text})
-            elif block.get("type") == "tool_use":
+            if block.get("type") == "tool_use":
                 frames.append({
                     "type": "function_call",
                     "name": block.get("name", ""),
@@ -905,9 +904,12 @@ async def _stream_claude_persistent(req: ChatRequest, request: Request):
             "--input-format", "stream-json",
             "--max-turns", str(CLAUDE_MAX_TURNS),
             "--dangerously-skip-permissions",
-            "--session-id", session_id,
             "--verbose",
         ]
+        if req.claude_resume_existing:
+            cmd_args.extend(["--resume", session_id])
+        else:
+            cmd_args.extend(["--session-id", session_id])
         # Both app-facing "interactive" and "persistent" modes use Claude Code's
         # supported programmatic stream-json path. A true TTY interactive session
         # cannot be driven safely through browser SSE, but this keeps one Claude
@@ -934,7 +936,7 @@ async def _stream_claude_persistent(req: ChatRequest, request: Request):
 
         yield _sse_frame({
             "type": "status",
-            "message": f"spawned {mode} process (model={model}, effort={effort}, session={session_id})",
+            "message": f"{'resumed' if req.claude_resume_existing else 'spawned'} {mode} process (model={model}, effort={effort}, session={session_id})",
             "session_id": session_id,
         })
 
@@ -2089,9 +2091,12 @@ async def chat_stream(req: ChatRequest, request: Request):
 
         system_content = STABLEDAW_SYSTEM_PROMPT
         skill_block = _stable_audio_skill_system_block()
-        claude_session_id = _resolve_claude_session_id(req) if provider == "claude" else None
-        if claude_session_id and not req.claudeSessionId and not req.conversationId:
-            req.conversationId = claude_session_id
+        claude_session_id = None
+        if provider == "claude":
+            req.claude_resume_existing = bool(req.claudeSessionId or req.conversationId)
+            claude_session_id = _resolve_claude_session_id(req)
+            if not req.claude_resume_existing:
+                req.conversationId = claude_session_id
         include_skill_block = bool(skill_block)
         if claude_session_id:
             include_skill_block = claude_session_id not in _stable_audio_skill_bootstrapped_sessions
