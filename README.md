@@ -46,7 +46,7 @@ cd frontend && npm run dev
 uv sync
 
 # Optional Linux CUDA wheels for Medium model, if you need a specific CUDA build
-uv pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu126
+uv pip install torch==2.7.1 torchaudio==2.7.1 --index-url https://download.pytorch.org/whl/cu126
 
 # Frontend
 cd frontend && npm install
