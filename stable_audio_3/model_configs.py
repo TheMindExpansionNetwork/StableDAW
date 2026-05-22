@@ -132,10 +132,16 @@ class AutoencoderModelConfig:
             return local_config, local_ckpt
 
         for fallback in self.stable_audio_3:
-            try:
-                cached_config, cached_ckpt = fallback.resolve()
-            except FileNotFoundError:
-                continue
+            cached_config = _local_override(fallback.repo_id, fallback.config_path)
+            if cached_config is None:
+                cached_config = try_to_load_from_cache(
+                    fallback.repo_id, fallback.config_path
+                )
+            cached_ckpt = _local_override(fallback.repo_id, fallback.ckpt_path)
+            if cached_ckpt is None:
+                cached_ckpt = try_to_load_from_cache(
+                    fallback.repo_id, fallback.ckpt_path
+                )
             if isinstance(cached_config, str) and isinstance(cached_ckpt, str):
                 return cached_config, cached_ckpt
 

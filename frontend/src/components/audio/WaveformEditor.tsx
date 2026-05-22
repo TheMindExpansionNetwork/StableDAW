@@ -303,9 +303,10 @@ export const WaveformEditor: React.FC<{ onSwitchTab?: (tab: string) => void }> =
   // --- Multi-track timeline playback (routes through the footer's playerStore) ---
 
   const stopEditorPlayback = useCallback(() => {
-    usePlayerStore.getState().pause();
+    usePlayerStore.getState().stop();
+    setPlayhead(0);
     stopPreview();
-  }, [stopPreview]);
+  }, [setPlayhead, stopPreview]);
 
   const playEditorTimeline = useCallback(async () => {
     if (clips.length === 0) return;
@@ -892,10 +893,7 @@ export const WaveformEditor: React.FC<{ onSwitchTab?: (tab: string) => void }> =
 
   // Ruler click sets playhead immediately (same coord math as track lanes).
   const onRulerMouseDown = (e: React.MouseEvent) => {
-    if (!timelineRef.current) return;
-    const rect = timelineRef.current.getBoundingClientRect();
-    const sec = Math.max(0, pxToSec(e.clientX - rect.left));
-    seekEditorTo(sec);
+    seekEditorTo(secFromClientX(e.clientX));
   };
 
   const onTimelineClick = (e: React.MouseEvent) => {
