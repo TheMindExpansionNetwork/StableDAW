@@ -416,7 +416,15 @@ export function useOrbChat(config: OrbChatConfig = {}): OrbChatState {
                             const name = event.name || event.function?.name || 'tool';
                             setStatusText(`Using ${name}...`);
                         } else if (event.type === 'status') {
-                            setStatusText(event.message);
+                            const raw = event.message || '';
+                            const friendly = raw.startsWith('spawned') ? 'Connecting...'
+                                : raw.startsWith('thinking') ? 'Thinking...'
+                                : raw.startsWith('restarting') ? 'Restarting...'
+                                : raw.includes('session initialized') ? 'Ready'
+                                : raw.startsWith('Connecting') ? raw.replace(/\s*\(.*\)/, '')
+                                : raw.startsWith('Key rate') ? 'Retrying...'
+                                : raw;
+                            setStatusText(friendly);
                         } else if (event.type === 'error') {
                             setMessages(prev => prev.map(m =>
                                 m.id === assistantId ? { ...m, content: event.error, isError: true, isStreaming: false } : m
