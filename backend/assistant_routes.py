@@ -15,14 +15,13 @@ import logging
 import os
 import time
 import uuid
-from typing import Any, Optional, List
+from typing import Any, List, Optional
 
 import httpx
+from backend.key_pool import _key_id, key_pool
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-
-from backend.key_pool import key_pool, _key_id
 
 logger = logging.getLogger(__name__)
 
@@ -1886,7 +1885,7 @@ async def chat_stream(req: ChatRequest, request: Request):
                 break
         if user_text:
             try:
-                from backend.rag import retrieve, format_context
+                from backend.rag import format_context, retrieve
 
                 rag_chunks = await asyncio.to_thread(retrieve, user_text, 5)
 
