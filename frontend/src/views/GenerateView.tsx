@@ -2,10 +2,11 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Sparkles, Command, Layers,
   Mic2, FileAudio,
-  Plus, X, Settings2, RefreshCw, Scissors,
+  Plus, X, Settings2, RefreshCw, Scissors, Download, Music,
 } from 'lucide-react';
 import { Section } from '../components/ui/Section';
 import { useGenerateParamsStore } from '../state/generateParamsStore';
+import { useGenerateStore } from '../state/generateStore';
 import { WaveformPreview } from '../components/audio/WaveformPreview';
 import { enhanceStableAudioPrompt, type PromptEnhancementTarget } from '../orb-kit/promptEnhancer';
 
@@ -17,6 +18,13 @@ export const GenerateView: React.FC = () => {
   const p = useGenerateParamsStore();
   const setField = p.setField;
   const patch = p.patch;
+
+  const lastAudioUrl  = useGenerateStore((s) => s.lastAudioUrl);
+  const lastAudioBlob = useGenerateStore((s) => s.lastAudioBlob);
+  const lastFilename  = useGenerateStore((s) => s.lastFilename);
+  const lastModelName = useGenerateStore((s) => s.lastModelName);
+  const lastDuration  = useGenerateStore((s) => s.lastDurationSec);
+  const error         = useGenerateStore((s) => s.error);
 
   const inpaintAudioUrl = useMemo(
     () => (p.inpaintAudioFile ? URL.createObjectURL(p.inpaintAudioFile) : null),
@@ -348,7 +356,60 @@ export const GenerateView: React.FC = () => {
         </button>
       </Section>
 
-      {/* RUN button + Output Status Monitor are now rendered by the Shell as pinned strips above the Processing Log. */}
+      {/* Output Status Monitor — last generated audio */}
+      {(lastAudioUrl || error) && (
+        <Section title="LAST OUTPUT" icon={Music} defaultOpen={true}>
+          {error && (
+            <p className="text-[9px] font-mono text-red-400 mb-2 wrap-break-word">{error}</p>
+          )}
+          {lastAudioUrl && (
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[9px] font-mono text-zinc-400 truncate flex-1">
+                  {lastFilename ?? 'output'}
+                </span>
+                <div className="flex items-center gap-1.5 shrink-0 text-[8px] font-mono text-zinc-600 uppercase">
+                  {lastModelName && <span>{lastModelName}</span>}
+                  {lastDuration != null && <span>{lastDuration}s</span>}
+                </div>
+              </div>
+              <div className="rounded overflow-hidden border border-white/5">
+                <WaveformPreview audioUrl={lastAudioUrl} height={56} />
+              </div>
+              <a
+                href={lastAudioUrl}
+                download={lastFilename ?? 'output.wav'}
+                className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded border border-zinc-700 hover:border-green-500/50 text-zinc-300 hover:text-green-200 text-[9px] font-bold uppercase tracking-widest transition-colors"
+              >
+                <Download className="w-3 h-3" />
+                Download
+              </a>
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  className="py-1.5 rounded border border-zinc-700 hover:border-cyan-500/50 text-zinc-300 hover:text-cyan-200 text-[9px] font-bold uppercase tracking-widest transition-colors"
+                  disabled={!lastAudioBlob}
+                  onClick={() => {
+                    const blob = lastAudioBlob;
+                    if (!blob) return;
+                    const file = new File([blob], lastFilename ?? 'output.wav', { type: blob.type });
+                    useGenerateParamsStore.getState().patch({ initAudioFile: file, initAudioEnabled: true });
+                  }}
+                >Send to Init</button>
+                <button
+                  className="py-1.5 rounded border border-zinc-700 hover:border-purple-500/50 text-zinc-300 hover:text-purple-200 text-[9px] font-bold uppercase tracking-widest transition-colors"
+                  disabled={!lastAudioBlob}
+                  onClick={() => {
+                    const blob = lastAudioBlob;
+                    if (!blob) return;
+                    const file = new File([blob], lastFilename ?? 'output.wav', { type: blob.type });
+                    useGenerateParamsStore.getState().patch({ inpaintAudioFile: file, inpaintEnabled: true, maskStart: 0, maskEnd: 0 });
+                  }}
+                >Send to Inpaint</button>
+              </div>
+            </div>
+          )}
+        </Section>
+      )}
 
     </div>
   );

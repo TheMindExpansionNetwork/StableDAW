@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { useStatusBarStore } from './statusBarStore';
 import { logError, logInfo } from './logStore';
 import { uuid } from '../orb-kit/utils';
+import { useLibraryStore } from './libraryStore';
+import { usePlayerStore } from './playerStore';
 
 interface StudioHistoryEntry {
   id: string;
@@ -17,9 +19,14 @@ interface StudioStoreState {
   isProcessing: boolean;
   error: string | null;
   processHistory: StudioHistoryEntry[];
+  // Pending action kept in sync by StudioView so GlobalGenerateBar can fire without local state.
+  pendingEffect: string;
+  pendingParams: Record<string, number>;
   setSourceFile: (file: File | null) => void;
   setOutputFormat: (format: string) => void;
-  processAudio: (payload: { effect: string; params: Record<string, number> }) => Promise<void>;
+  setPendingAction: (effect: string, params: Record<string, number>) => void;
+  processAudio: (payload: { effect: string; params: Record<string, number>; skipLibrary?: boolean }) => Promise<void>;
+  triggerPendingProcess: () => Promise<void>;
   reuseOutputAsSource: () => Promise<void>;
   clearOutput: () => void;
 }
@@ -40,6 +47,8 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
   isProcessing: false,
   error: null,
   processHistory: [],
+  pendingEffect: 'mastering_chain',
+  pendingParams: { lowBoost: 0, highBoost: 0, limiterCeiling: 0.95, targetLUFS: -14 },
 
   setSourceFile: (file) => {
     set({ sourceFile: file });
@@ -50,7 +59,16 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     set({ outputFormat: format });
   },
 
-  processAudio: async ({ effect, params }) => {
+  setPendingAction: (effect, params) => {
+    set({ pendingEffect: effect, pendingParams: params });
+  },
+
+  triggerPendingProcess: async () => {
+    const { pendingEffect, pendingParams, processAudio } = get();
+    await processAudio({ effect: pendingEffect, params: pendingParams });
+  },
+
+  processAudio: async ({ effect, params, skipLibrary }) => {
     const source = get().sourceFile;
     if (!source) {
       const message = 'Load a source audio file before processing.';
@@ -64,7 +82,7 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
       URL.revokeObjectURL(previous);
     }
 
-    set({ isProcessing: true, error: null });
+    set({ isProcessing: true, error: null, outputUrl: null });
     useStatusBarStore.getState().setText(`STUDIO PROCESS STARTED: ${effect}`);
     logInfo('studio', `Processing: effect=${effect} format=${get().outputFormat} source=${source.name} (${Math.round(source.size / 1024)}KB)`);
 
@@ -75,16 +93,20 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
     form.append('output_format', get().outputFormat);
 
     try {
+      logInfo('studio', `POST /api/studio/process — effect=${effect} params=${JSON.stringify(params)}`);
       const response = await fetch('/api/studio/process', {
         method: 'POST',
         body: form,
       });
 
       if (!response.ok) {
-        throw new Error(await parseErrorText(response));
+        const detail = await parseErrorText(response);
+        logError('studio', `POST /api/studio/process → ${response.status} ${response.statusText} — ${detail}`);
+        throw new Error(detail);
       }
 
       const blob = await response.blob();
+      logInfo('studio', `POST /api/studio/process → 200 OK — ${Math.round(blob.size / 1024)}KB ${get().outputFormat}`);
       const outputUrl = URL.createObjectURL(blob);
       const nextEntry: StudioHistoryEntry = {
         id: uuid(),
@@ -100,12 +122,39 @@ export const useStudioStore = create<StudioStoreState>()((set, get) => ({
         error: null,
       }));
       useStatusBarStore.getState().setText(`STUDIO PROCESS COMPLETE: ${effect}`);
-      logInfo('studio', `Completed: effect=${effect} → ${Math.round(blob.size / 1024)}KB ${get().outputFormat}`);
+
+      if (!skipLibrary) {
+        try {
+          const entryId = uuid();
+          const fmt = get().outputFormat;
+          const title = `studio-${effect}.${fmt}`;
+          await useLibraryStore.getState().addEntry({
+            id: entryId,
+            title,
+            prompt: `Effect: ${effect}`,
+            negativePrompt: '',
+            model: effect,
+            duration: 0,
+            steps: 0,
+            cfg: 0,
+            seed: 0,
+            audioBlob: blob,
+            mimeType: blob.type || 'audio/wav',
+            timestamp: new Date().toISOString(),
+            favorite: false,
+            rating: null,
+            tags: ['studio', effect],
+            notes: '',
+            source: 'studio',
+          });
+          await usePlayerStore.getState().load(blob, { label: title, entryId });
+        } catch { /* non-fatal */ }
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Studio process failed.';
       set({ isProcessing: false, error: message });
       useStatusBarStore.getState().setText(`STUDIO PROCESS FAILED: ${message}`);
-      logError('studio', message);
+      logError('studio', `effect=${effect} FAILED — ${message}`);
     }
   },
 

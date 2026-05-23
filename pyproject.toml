@@ -28,6 +28,7 @@ dependencies = [
     "chromadb>=1.0.0",
     "sentence-transformers>=3.0.0",
     "httpx>=0.28.1",
+    "psutil>=5.9.0",
     "librosa>=0.10.0",
     "onnxruntime<1.24",
     # Windows-only: pre-built CUDA 12.8 wheel for Python 3.10. Pinned here so

@@ -4,6 +4,7 @@ import { logError, logInfo, logWarn } from './logStore';
 interface StatusBarStoreState {
   text: string;
   healthy: boolean | null;
+  isBackendReady: boolean;
   setText: (text: string) => void;
   refreshHealth: () => Promise<void>;
 }
@@ -11,6 +12,7 @@ interface StatusBarStoreState {
 export const useStatusBarStore = create<StatusBarStoreState>()((set, get) => ({
   text: 'READY',
   healthy: null,
+  isBackendReady: false,
 
   setText: (text) => {
     set({ text });
@@ -20,6 +22,9 @@ export const useStatusBarStore = create<StatusBarStoreState>()((set, get) => ({
     const previousHealthy = get().healthy;
     try {
       const response = await fetch('/api/health');
+      // Backend port is bound — mark ready regardless of health status
+      set({ isBackendReady: true });
+
       if (!response.ok) {
         if (previousHealthy !== false) {
           logError('health', `API responded ${response.status}`);
@@ -50,7 +55,9 @@ export const useStatusBarStore = create<StatusBarStoreState>()((set, get) => ({
           : 'API UNHEALTHY',
       });
     } catch {
-      if (previousHealthy !== false) {
+      // Only log if we previously had a working connection and just lost it.
+      // Swallow startup ECONNREFUSED silently — the backoff poller handles retries.
+      if (previousHealthy === true) {
         logError('health', 'API unreachable');
       }
       set({ healthy: false, text: 'API UNREACHABLE' });

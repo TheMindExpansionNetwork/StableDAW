@@ -127,16 +127,9 @@ export const DAWCenterPanel: React.FC<{ onSwitchTab?: (tab: string) => void }> =
         <button
           type="button"
           onClick={() => setBottomOpen(true)}
-          className="hardware-card border-purple-500/40 bg-purple-500/10 hover:bg-purple-500/20 flex items-center justify-between px-3 py-2 cursor-pointer transition-colors group/restore"
+          className="hardware-card border-purple-500/40 bg-purple-500/10 hover:bg-purple-500/20 flex items-center justify-center py-2 cursor-pointer transition-colors group/restore"
         >
-           <div className="flex items-center gap-2">
-              <Activity className="w-4 h-4 text-purple-400" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-purple-200">Expand Bottom Panel</span>
-           </div>
-           <div className="flex items-center gap-1.5 text-purple-300 group-hover/restore:text-white transition-colors">
-              <span className="text-[9px] font-mono uppercase tracking-widest">Show</span>
-              <ChevronUp className="w-4 h-4" />
-           </div>
+           <ChevronUp className="w-4 h-4 text-purple-300 group-hover/restore:text-white transition-colors" />
         </button>
       )}
 

@@ -16,6 +16,15 @@ interface AutoencoderInfo {
   loaded_autoencoders: string[];
 }
 
+interface PendingTrainingPayload {
+  modelName: string;
+  dataDir: string;
+  outputDir: string;
+  rank: number;
+  alpha: number;
+  steps: number;
+}
+
 interface TrainingStoreState {
   modelInfo: ModelInfo | null;
   autoencoderInfo: AutoencoderInfo | null;
@@ -26,6 +35,9 @@ interface TrainingStoreState {
   logs: string[];
   encodedLatentsBase64: string | null;
   decodedAudioUrl: string | null;
+  pendingTrainingPayload: PendingTrainingPayload;
+  setPendingTrainingPayload: (payload: PendingTrainingPayload) => void;
+  triggerTraining: () => Promise<void>;
   refreshMetadata: () => Promise<void>;
   refreshJobs: () => Promise<void>;
   startLoraTraining: (payload: {
@@ -81,6 +93,27 @@ export const useTrainingStore = create<TrainingStoreState>()((set, get) => ({
   logs: [],
   encodedLatentsBase64: null,
   decodedAudioUrl: null,
+  pendingTrainingPayload: {
+    modelName: 'medium-rf',
+    dataDir: '',
+    outputDir: 'My_Sonic_Lora',
+    rank: 16,
+    alpha: 32,
+    steps: 200,
+  },
+
+  setPendingTrainingPayload: (payload) => {
+    set({ pendingTrainingPayload: payload });
+  },
+
+  triggerTraining: async () => {
+    const { isTraining, stopPolling, startLoraTraining, pendingTrainingPayload } = get();
+    if (isTraining) {
+      stopPolling();
+      return;
+    }
+    await startLoraTraining(pendingTrainingPayload);
+  },
 
   refreshMetadata: async () => {
     try {
@@ -133,9 +166,18 @@ export const useTrainingStore = create<TrainingStoreState>()((set, get) => ({
 
     try {
       const submit = await fetch('/api/jobs/train-lora', { method: 'POST', body: form });
-      const payload = (await submit.json()) as { job?: { id?: string } } | { error?: string; detail?: string };
+      
+      let payload: unknown = null;
+      try {
+        payload = await submit.json();
+      } catch {
+        // Handle non-JSON responses (like some 501s)
+      }
 
       if (!submit.ok) {
+        if (submit.status === 501) {
+          throw new Error('LoRA training is not currently implemented in this backend.');
+        }
         throw new Error(parseError(payload, 'Failed to submit training job.'));
       }
 
@@ -201,10 +243,18 @@ export const useTrainingStore = create<TrainingStoreState>()((set, get) => ({
     form.append('output_path', outputPath);
 
     const response = await fetch('/api/jobs/pre-encode', { method: 'POST', body: form });
-    const payload = (await response.json()) as { job?: { id?: string } } | { error?: string; detail?: string };
+    
+    let payload: unknown = null;
+    try {
+      payload = await response.json();
+    } catch {
+      // Ignored
+    }
 
     if (!response.ok) {
-      const message = parseError(payload, 'Pre-encode submission failed.');
+      const message = response.status === 501 
+        ? 'Pre-encode is not currently implemented in this backend.'
+        : parseError(payload, 'Pre-encode submission failed.');
       set({ error: message });
       useStatusBarStore.getState().setText(`PRE-ENCODE FAILED: ${message}`);
       return;
@@ -224,10 +274,18 @@ export const useTrainingStore = create<TrainingStoreState>()((set, get) => ({
       method: 'POST',
       body: form,
     });
-    const payload = (await response.json()) as { latents_base64?: string; error?: string; detail?: string };
+    
+    let payload: unknown = null;
+    try {
+      payload = await response.json();
+    } catch {
+      // Ignored
+    }
 
     if (!response.ok) {
-      const message = parseError(payload, 'Autoencoder encode failed.');
+      const message = response.status === 501 
+        ? 'Autoencoder encode is not currently implemented in this backend.'
+        : parseError(payload, 'Autoencoder encode failed.');
       set({ error: message });
       useStatusBarStore.getState().setText(`AUTOENCODE FAILED: ${message}`);
       return;
@@ -270,6 +328,9 @@ export const useTrainingStore = create<TrainingStoreState>()((set, get) => ({
 
     if (!response.ok) {
       const message = await (async () => {
+        if (response.status === 501) {
+          return 'Autoencoder decode is not currently implemented in this backend.';
+        }
         try {
           const payload = (await response.json()) as { error?: string; detail?: string };
           return parseError(payload, 'Autoencoder decode failed.');

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Sliders, Waves, Share2, 
@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { Section } from '../components/ui/Section';
 import { useStudioStore } from '../state/studioStore';
+import { useGenerateParamsStore } from '../state/generateParamsStore';
 
 export const StudioView: React.FC = () => {
    const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -62,6 +63,12 @@ export const StudioView: React.FC = () => {
          params: buildEffectParams(selectedEffect),
       });
    };
+
+  // Keep studioStore's pendingAction in sync so GlobalGenerateBar can fire without local state.
+  useEffect(() => {
+    useStudioStore.getState().setPendingAction(selectedEffect, buildEffectParams(selectedEffect));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedEffect, macros]);
 
   return (
     <div className="flex flex-col gap-2 h-full text-[11px] pb-4 px-2 pt-2">
@@ -230,6 +237,20 @@ export const StudioView: React.FC = () => {
                       <a href={outputUrl} download="studio-output.wav" className="btn-ghost text-[9px] py-1.5 text-center">DOWNLOAD</a>
                       <button className="btn-ghost text-[9px] py-1.5" onClick={() => void reuseOutputAsSource()}>REUSE</button>
                       <button className="btn-ghost text-[9px] py-1.5" onClick={clearOutput}>CLEAR</button>
+                   </div>
+                   <div className="grid grid-cols-2 gap-2">
+                      <button className="btn-ghost text-[9px] py-1.5 hover:border-cyan-500/50! hover:text-cyan-200!" onClick={async () => {
+                        const blob = await fetch(outputUrl).then((r) => r.blob());
+                        const fmt = useStudioStore.getState().outputFormat;
+                        const file = new File([blob], `studio-output.${fmt}`, { type: blob.type });
+                        useGenerateParamsStore.getState().patch({ initAudioFile: file, initAudioEnabled: true });
+                      }}>SEND TO INIT</button>
+                      <button className="btn-ghost text-[9px] py-1.5 hover:border-purple-500/50! hover:text-purple-200!" onClick={async () => {
+                        const blob = await fetch(outputUrl).then((r) => r.blob());
+                        const fmt = useStudioStore.getState().outputFormat;
+                        const file = new File([blob], `studio-output.${fmt}`, { type: blob.type });
+                        useGenerateParamsStore.getState().patch({ inpaintAudioFile: file, inpaintEnabled: true, maskStart: 0, maskEnd: 0 });
+                      }}>SEND TO INPAINT</button>
                    </div>
                 </div>
              )}

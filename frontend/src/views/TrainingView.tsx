@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Zap, Brain, Activity, Terminal, 
-  Settings2, Layers, Cpu, Database,
-  ArrowRight, X, Play, RefreshCw, BarChart3, LineChart, UploadCloud
+import {
+  Zap, Brain, Activity, Terminal,
+  Layers, Cpu, Database,
+  BarChart3, UploadCloud
 } from 'lucide-react';
 import { Section } from '../components/ui/Section';
 import { useTrainingStore } from '../state/trainingStore';
@@ -17,11 +17,9 @@ export const TrainingView: React.FC = () => {
    const encodedLatentsBase64 = useTrainingStore((state) => state.encodedLatentsBase64);
    const decodedAudioUrl = useTrainingStore((state) => state.decodedAudioUrl);
    const refreshMetadata = useTrainingStore((state) => state.refreshMetadata);
-   const startLoraTraining = useTrainingStore((state) => state.startLoraTraining);
    const encodeAudioToLatents = useTrainingStore((state) => state.encodeAudioToLatents);
    const decodeLatentsToAudio = useTrainingStore((state) => state.decodeLatentsToAudio);
    const clearDecodedAudio = useTrainingStore((state) => state.clearDecodedAudio);
-   const stopPolling = useTrainingStore((state) => state.stopPolling);
 
   const [params, setParams] = useState({
     moduleName: 'My_Sonic_Lora',
@@ -37,21 +35,17 @@ export const TrainingView: React.FC = () => {
       void refreshMetadata();
    }, [refreshMetadata]);
 
-   const handleExecute = () => {
-      if (isTraining) {
-         stopPolling();
-         return;
-      }
-
-      void startLoraTraining({
-         modelName: 'medium-rf',
-         dataDir: params.datasetPath,
-         outputDir: params.moduleName || 'lora_out',
-         rank: params.rank,
-         alpha: params.alpha,
-         steps: params.epochs,
-      });
-   };
+  // Keep trainingStore's pendingPayload in sync so GlobalGenerateBar can fire without local state.
+  useEffect(() => {
+    useTrainingStore.getState().setPendingTrainingPayload({
+      modelName: 'medium-rf',
+      dataDir: params.datasetPath,
+      outputDir: params.moduleName || 'lora_out',
+      rank: params.rank,
+      alpha: params.alpha,
+      steps: params.epochs,
+    });
+  }, [params]);
 
   return (
     <div className="flex flex-col gap-2 h-full text-[11px] pb-4 px-2 pt-2">
@@ -195,16 +189,6 @@ export const TrainingView: React.FC = () => {
          </div>
       </Section>
 
-      <Section title="EXECUTION" icon={Settings2} defaultOpen={true}>
-         <button 
-                onClick={handleExecute}
-           className={`w-full py-3 rounded font-black uppercase tracking-widest text-[12px] flex items-center justify-center gap-2 transition-all
-             ${isTraining ? 'bg-orange-600/20 border border-orange-500/50 text-orange-500 hover:bg-orange-600/40' : 'btn-primary'}`}
-         >
-           {isTraining ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-current" />}
-           {isTraining ? 'HALT TRAINING' : 'ENGAGE BACKPROP'}
-         </button>
-      </Section>
 
     </div>
   );

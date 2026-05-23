@@ -200,9 +200,9 @@ Submits audio generation jobs to the backend and displays their output. Supports
 
 ### 6.1 PRIMARY SYNTHESIS / PROMPT
 
-- **Prompt** — required. Plain-text description of the desired audio content, instrumentation, or sonic texture.
-- **Negative prompt** — optional. Aspects or characteristics to suppress.
-- **Magic prompt button** (sparkle icon, bottom-right of the prompt box) — inserts a sample prompt when the prompt field is empty. Has no effect if the field already contains text.
+- **Prompt** - required. Plain-text description of the desired audio content, instrumentation, or sonic texture.
+- **Negative prompt** - optional. Aspects or characteristics to suppress.
+- **Magic prompt button** (sparkle icon, bottom-right of the prompt box) - inserts a sample prompt when the prompt field is empty. Clicking the sparkles icon sends the current text to the AI Assistant to optimize the prompt for Stable Audio conditioning.
 
 ### 6.2 GENERATION PARAMETERS
 
@@ -217,7 +217,16 @@ Six controls arranged in a 3-column grid:
 | **CFG** | Float | Classifier-free guidance scale. ARC default: 1.0. RF default: 7.0. Higher values increase adherence to the prompt but can introduce artifacts. |
 | **Seed** | Integer + reroll button | Use −1 for a random seed on each run. The reroll button generates and displays a new random seed without submitting a job. |
 
-### 6.3 INIT SIGNAL / CONDITIONING
+### 6.3 ADVANCED GENERATION PANEL
+
+The Advanced Generation Panel provides a dense layout for configuration.
+- **Output Settings** controls automatic playback and automatic downloading behavior.
+- **Quick Actions** route generated audio directly to the Waveform Editor, Init Audio, or Inpainting modules.
+- **Templates Panel** allows users to save and restore full generation parameters.
+- **Saved Prompts Dropdown** maintains a history of frequently used user-defined prompts.
+- **Spectrogram Viewer** displays Mel, STFT, Chromagram, and CQT visualizations of generated audio.
+
+### 6.4 INIT SIGNAL / CONDITIONING
 
 Audio-to-audio mode. Upload a source file via the dropzone to condition the model on existing audio.
 
@@ -226,7 +235,7 @@ Audio-to-audio mode. Upload a source file via the dropzone to condition the mode
 
 Removing the source file returns the form to text-to-audio mode.
 
-### 6.4 INPAINTING / REGEN REGION
+### 6.5 INPAINTING / REGEN REGION
 
 Replaces a defined time window within a source audio clip while preserving everything outside that window.
 
@@ -238,23 +247,23 @@ Replaces a defined time window within a source audio clip while preserving every
 
 The form field `mask_start` and `mask_end` are submitted in seconds relative to the start of the inpaint audio file.
 
-### 6.5 LORA / ADAPTIVE LAYERS
+### 6.6 LORA / ADAPTIVE LAYERS
 
-Stack one or more LoRA adapters for the next generation. Each adapter row displays its name, a weight slider (0–1), and a remove button.
+Stack one or more LoRA adapters for the next generation. Each adapter row displays its name, a weight slider (0-1), and a remove button.
 
 > **Current status:** UI scaffolding. The `/api/generate-jobs` endpoint does not yet forward LoRA references to the pipeline. LoRA at inference is supported directly via the Python API (see [§17.5](#175-lora-at-inference)) and the Gradio UI.
 
-### 6.6 Output Status Monitor
+### 6.7 Output Status Monitor
 
 Appears below the accordion after a job is submitted or completed.
 
-- Binary progress bar (`queued → running → completed`).
+- Binary progress bar (`queued -> running -> completed`).
 - Engine information chip (model, steps).
 - Inline audio player for the completed result.
 - Download and clear buttons.
 - All completed results are concurrently auto-saved to the Library.
 
-### 6.7 RUN GENERATION
+### 6.8 RUN GENERATION
 
 Sticky bar fixed at the bottom of the left panel. Submits the generation job to `POST /api/generate-jobs`. While a job is active, the button changes to a red **ABORT** button showing an estimated percentage. Clicking Abort cancels the polling loop; the backend job continues running but its result is discarded by the UI.
 
@@ -350,7 +359,7 @@ Pre-encoding a dataset to latents before training accelerates iteration. Submit 
 
 Upload an audio file; the backend encodes it to base64-serialized latents and then decodes them back to audio for reconstruction quality verification.
 
-> **Backend status:** `/api/autoencoder/info` returns an empty list, so the TRAIN tab displays "no autoencoders available." Encode and decode endpoints return HTTP 501.
+> **Backend status:** `/api/autoencoder/info` returns an empty list, so the TRAIN tab displays "no autoencoders available." Encode and decode endpoints return HTTP 501. Certain training endpoints are currently unimplemented on the backend and return HTTP 501 status codes. The frontend intercepts these responses to provide specific error messages in the user interface instead of generic network errors.
 
 ### 8.4 Job Polling
 
@@ -658,7 +667,7 @@ Full piano roll interface embedded in the bottom panel. See [§12](#12-piano-rol
 
 Session-scoped file holding area for arbitrary audio files. Contents are lost on page reload.
 
-- **Dropzone** — accepts drag-and-drop or click-to-upload. Supported formats: WAV, MP3, FLAC, OGG, AAC, M4A, Opus.
+- **Dropzone** - accepts drag-and-drop or click-to-upload. Supported formats: WAV, MP3, FLAC, OGG, AAC, M4A, Opus. Users can drag entries from the Library tab and drop them directly into the Media Bucket, Waveform Editor, and Step Sequencer. This operation utilizes the application/x-stabledaw-library-id data transfer protocol to locate the source file from the IndexedDB store.
 - **Per-item display** — filename, MIME type, file size.
 - **Send to Editor** — decodes peaks and appends the item to the waveform editor as a new clip on a new track. Non-audio files are rejected with a log entry.
 - **Send to Library** — decodes the audio, measures its duration, and creates a persistent IndexedDB entry with `source: 'bucket'`.
@@ -688,7 +697,7 @@ A fixed bar at the bottom of the viewport (z-index 50). Visible and functional a
 | **Skip to end** | Calls `playerStore.seekByFraction(1)`. |
 | **Fullscreen** | Toggles browser fullscreen on `document.documentElement`. |
 
-**Progress bar:** a horizontal track showing playback position. Click anywhere to seek (`playerStore.seekByFraction`). On hover, a circular scrubber handle appears at the current position. Time labels at left and right show current time and total duration.
+**Progress bar:** a horizontal track showing playback position. Click anywhere to seek (`playerStore.seekByFraction`). On hover, a circular scrubber handle appears at the current position. Time labels at left and right show current time and total duration. The Player Footer synchronizes its playhead position with the Waveform Editor. Scrubbing the transport progress bar updates the editor timeline position when the editor timeline is the active audio source.
 
 ### 14.3 Utilities (right region)
 
@@ -756,7 +765,15 @@ Response when degraded (HTTP 503):
 { "status": "degraded", "model_loaded": false, "error": "MODEL_LOAD_FAILED" }
 ```
 
-### 16.2 Model Info
+### 16.2 System Statistics
+
+```
+GET /api/system-stats
+```
+
+Returns a JSON object detailing current hardware utilization. This endpoint invokes nvidia-smi and polls psutil to stream GPU VRAM usage, GPU Temp, GPU Utilization, CPU usage, and RAM usage.
+
+### 16.3 Model Info
 
 ```
 GET /api/model-info
@@ -826,7 +843,16 @@ GET /api/jobs/{job_id}
 
 Batch results use `"batch": true` with an `"items"` array instead of a single `"item"`.
 
-### 16.4 Generation — Sync (Legacy / Gradio)
+### 16.5 Spectrogram Generation
+
+```
+GET /api/spectrogram/{job_id}
+GET /api/spectrogram/{job_id}/{index}
+```
+
+Retrieves cached spectrogram output to prevent redundant generation overhead.
+
+### 16.6 Generation - Sync (Legacy / Gradio)
 
 ```
 POST /api/generate   multipart/form-data
@@ -836,7 +862,7 @@ Identical surface to `/api/generate-jobs` with additional advanced parameters: `
 
 Response: raw binary audio body (`audio/wav` by default). Retained for backwards compatibility and the Gradio UI.
 
-### 16.5 Studio Processing
+### 16.7 Studio Processing
 
 ```
 POST /api/studio/process   multipart/form-data
@@ -851,16 +877,16 @@ POST /api/studio/process   multipart/form-data
 
 Response: binary audio body with the appropriate `Content-Type` header.
 
-### 16.6 Jobs List
+### 16.8 Jobs List
 
 ```
 GET /api/jobs
-→ Array of all job objects currently in the in-memory store.
+-> Array of all job objects currently in the in-memory store.
 ```
 
-The job store is in-memory only; all jobs are lost on backend restart.
+The job store is in-memory only. All jobs are lost on backend restart.
 
-### 16.7 Training and Autoencoder (Stub Endpoints)
+### 16.9 Training and Autoencoder (Stub Endpoints)
 
 | Endpoint | Status |
 |---|---|
@@ -870,16 +896,16 @@ The job store is in-memory only; all jobs are lost on backend restart.
 | `POST /api/autoencoder/encode` | HTTP 501. |
 | `POST /api/autoencoder/decode` | HTTP 501. |
 
-### 16.8 Presets
+### 16.10 Presets
 
 ```
-GET /api/presets   → []
-POST /api/presets  → { "id": "<uuid>", "saved": true }
+GET /api/presets   -> []
+POST /api/presets  -> { "id": "<uuid>", "saved": true }
 ```
 
 Not consumed by the UI. Reserved for future use.
 
-### 16.9 Assistant
+### 16.11 Assistant
 
 All routes under `/api/assistant` are provided by `backend/assistant_routes.py`.
 
@@ -944,11 +970,11 @@ GET /api/assistant/reindex
 
 Forces a full re-parse and re-embedding of `USER_GUIDE.md` into the ChromaDB vector store. Called automatically at startup.
 
-### 16.10 Module Loader
+### 16.12 Module Loader
 
 ```
 GET /api/modules
-→ [ { "name", "label", "enabled", "api_prefix", ... }, ... ]
+-> [ { "name", "label", "enabled", "api_prefix", ... }, ... ]
 ```
 
 Returns the list of module manifests (`module.json` contents) for all modules that loaded successfully at startup. A module that failed to load does not appear in this list.

@@ -11,6 +11,7 @@ import logging
 import os
 import re
 import shutil
+import subprocess
 import tempfile
 import time
 import uuid
@@ -21,7 +22,7 @@ from typing import Optional
 import numpy as np
 import torch
 import torchaudio
-from fastapi import FastAPI, Form, File, HTTPException, Request, UploadFile
+from fastapi import Body, FastAPI, Form, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 
@@ -79,8 +80,15 @@ _generation_pipelines: dict[str, object] = {}
 _active_model_name = DEFAULT_GENERATION_MODEL
 _generation_job_lock = asyncio.Lock()
 
+from collections import OrderedDict
 # Spectrogram cache: {job_id: {mel, stft, chromagram, cqt}}
-_spec_cache: dict[str, dict[str, str]] = {}
+_spec_cache: OrderedDict[str, dict[str, str]] = OrderedDict()
+_SPEC_CACHE_MAX_SIZE = 20
+
+def _add_to_spec_cache(key: str, value: dict[str, str]):
+    _spec_cache[key] = value
+    if len(_spec_cache) > _SPEC_CACHE_MAX_SIZE:
+        _spec_cache.popitem(last=False)
 
 
 @dataclass(frozen=True)
@@ -214,7 +222,7 @@ def _make_generation_filename(
     return f"{basename}_{index}.{fmt}"
 
 
-def _save_generation_artifacts(
+def _save_generation_artifacts_sync(
     job_id: str,
     index: int,
     audio_bytes: bytes,
@@ -223,7 +231,7 @@ def _save_generation_artifacts(
     spectrograms: dict[str, str],
     metadata: dict | None = None,
 ) -> dict:
-    """Save one generation's audio, spectrogram PNGs, and metadata locally."""
+    """Save one generation's audio, spectrogram PNGs, and metadata locally (blocking)."""
     item_dir = _get_generation_artifacts_root() / job_id / f"{index:02d}"
     item_dir.mkdir(parents=True, exist_ok=True)
 
@@ -357,17 +365,17 @@ async def _decode_audio_bytes(audio_bytes: bytes) -> tuple[np.ndarray, int]:
         buf.seek(0)
 
     # Fallback: torchaudio via temp file
-    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
-        f.write(audio_bytes)
-        fname = f.name
+    fd, fname = tempfile.mkstemp(suffix=".wav")
     try:
+        with os.fdopen(fd, 'wb') as f:
+            f.write(audio_bytes)
         t, sr = torchaudio.load(fname)
         return t.numpy(), sr
     finally:
         try:
             os.unlink(fname)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Failed to delete temp audio file {fname}: {e}")
 
 
 def _generate_mel(waveform: torch.Tensor, sr: int) -> str:
@@ -489,8 +497,14 @@ def _generate_spectrograms(waveform: torch.Tensor, sr: int) -> dict[str, str]:
 
 @app.on_event("startup")
 async def load_model():
+    loop = asyncio.get_event_loop()
+
+    # Run blocking model load off the event loop so /api/health can respond
+    # immediately while the model is still loading in the background.
     try:
-        _get_or_load_generation_pipeline(DEFAULT_GENERATION_MODEL)
+        await loop.run_in_executor(
+            None, _get_or_load_generation_pipeline, DEFAULT_GENERATION_MODEL
+        )
     except Exception as e:
         logger.warning(
             "Default generation model %r failed to load at startup: %s — "
@@ -506,7 +520,7 @@ async def load_model():
     try:
         from backend.rag import initialize_rag
 
-        n_chunks = initialize_rag()
+        n_chunks = await loop.run_in_executor(None, initialize_rag)
         _logger.info("RAG indexed %d chunks", n_chunks)
     except Exception as e:
         _logger.warning("RAG initialization failed (non-fatal): %s", e)
@@ -515,6 +529,76 @@ async def load_model():
 @app.get("/api/modules")
 async def get_modules():
     return getattr(app.state, "loaded_modules", [])
+
+
+@app.get("/api/modules/all")
+async def get_all_modules():
+    modules_dir = Path(__file__).parent / "modules"
+    loaded_names = {m.get("name") for m in getattr(app.state, "loaded_modules", [])}
+    result = []
+    if modules_dir.is_dir():
+        for module_dir in sorted(modules_dir.iterdir()):
+            if not module_dir.is_dir():
+                continue
+            config_path = module_dir / "module.json"
+            if config_path.exists():
+                config = json.loads(config_path.read_text())
+                config["_dir"] = module_dir.name
+                config["_loaded"] = config.get("name") in loaded_names
+                result.append(config)
+    return result
+
+
+@app.patch("/api/modules/{module_name}/enabled")
+async def set_module_enabled(module_name: str, enabled: bool = Body(..., embed=True)):
+    modules_dir = Path(__file__).parent / "modules"
+    config_path = modules_dir / module_name / "module.json"
+    if not config_path.exists():
+        raise HTTPException(status_code=404, detail="Module not found")
+    config = json.loads(config_path.read_text())
+    config["enabled"] = enabled
+    config_path.write_text(json.dumps(config, indent=2))
+    config["_dir"] = module_name
+    return config
+
+
+@app.get("/api/system-stats")
+async def system_stats():
+    stats: dict = {}
+    if torch.cuda.is_available():
+        stats["vram_used_gb"] = round(torch.cuda.memory_allocated() / 1024**3, 2)
+        stats["vram_total_gb"] = round(torch.cuda.get_device_properties(0).total_memory / 1024**3, 2)
+        try:
+            r = subprocess.run(
+                ["nvidia-smi", "--query-gpu=utilization.gpu,temperature.gpu", "--format=csv,noheader,nounits"],
+                capture_output=True, text=True, timeout=2,
+            )
+            if r.returncode == 0:
+                parts = [p.strip() for p in r.stdout.strip().split(",")]
+                if len(parts) >= 2:
+                    stats["gpu_util_pct"] = int(parts[0])
+                    stats["gpu_temp_c"] = int(parts[1])
+        except Exception:
+            stats["gpu_util_pct"] = None
+            stats["gpu_temp_c"] = None
+    else:
+        stats["vram_used_gb"] = 0
+        stats["vram_total_gb"] = 0
+        stats["gpu_util_pct"] = None
+        stats["gpu_temp_c"] = None
+
+    try:
+        import psutil
+        stats["cpu_pct"] = round(psutil.cpu_percent(interval=None))
+        vm = psutil.virtual_memory()
+        stats["ram_used_gb"] = round(vm.used / 1024**3, 1)
+        stats["ram_total_gb"] = round(vm.total / 1024**3, 1)
+    except Exception:
+        stats["cpu_pct"] = None
+        stats["ram_used_gb"] = None
+        stats["ram_total_gb"] = None
+
+    return stats
 
 
 @app.get("/api/health")
@@ -765,16 +849,21 @@ async def generate(
             generate_args["inpaint_mask_start_seconds"] = mask_start
             generate_args["inpaint_mask_end_seconds"] = mask_end
 
-    audio = pipeline.generate(**generate_args)
-    audio = audio.to(torch.float32).clamp(-1, 1).squeeze(0).cpu()
-
-    # Output format
-    fmt = file_format if file_format in ("wav", "flac", "ogg") else "wav"
+    loop = asyncio.get_event_loop()
+    def _do_generate():
+        gen_audio = pipeline.generate(**generate_args)
+        gen_audio = gen_audio.to(torch.float32).clamp(-1, 1).squeeze(0).cpu()
+        
+        fmt = file_format if file_format in ("wav", "flac", "ogg") else "wav"
+        
+        buf = io.BytesIO()
+        torchaudio.save(buf, gen_audio, sample_rate, format=fmt)
+        buf.seek(0)
+        return buf, fmt
+        
+    buffer, fmt = await loop.run_in_executor(None, _do_generate)
+    
     mime_map = {"wav": "audio/wav", "flac": "audio/flac", "ogg": "audio/ogg"}
-
-    buffer = io.BytesIO()
-    torchaudio.save(buffer, audio, sample_rate, format=fmt)
-    buffer.seek(0)
 
     return StreamingResponse(
         buffer,
@@ -793,8 +882,10 @@ JOBS: dict[str, dict] = {}
 
 
 def _generate_to_bytes(
-    generation_pipeline, generate_args: dict, file_format: str
+    generation_pipeline, generate_args: dict, file_format: str, callback=None
 ) -> tuple[bytes, str]:
+    if callback:
+        generate_args["callback"] = callback
     audio = generation_pipeline.generate(**generate_args)
     audio = audio.to(torch.float32).clamp(-1, 1).squeeze(0).cpu()
     fmt = file_format if file_format in ("wav", "flac", "ogg") else "wav"
@@ -835,8 +926,14 @@ async def _run_generate_job(
                     args = dict(base_args)
                     if batch_size > 1 and seed_base != -1:
                         args["seed"] = seed_base + i
+                        
+                    def _step_callback(step_info):
+                        # Ensure we update the job progress safely
+                        if job_id in JOBS:
+                            JOBS[job_id]["progress"]["step"] = step_info.get("i", 0) + 1
+                            
                     audio_bytes, fmt = await loop.run_in_executor(
-                        None, _generate_to_bytes, generation_pipeline, args, file_format
+                        None, _generate_to_bytes, generation_pipeline, args, file_format, _step_callback
                     )
                     mime_type = mime_map.get(fmt, "audio/wav")
                     filename = _make_generation_filename(
@@ -848,28 +945,33 @@ async def _run_generate_job(
                         base_args.get("negative_prompt"),
                         int(args.get("seed", -1)),
                     )
-                    waveform, sr = torchaudio.load(io.BytesIO(audio_bytes))
-                    spectrograms = _generate_spectrograms(waveform, sr)
-                    artifact_info = _save_generation_artifacts(
-                        job_id=job_id,
-                        index=i,
-                        audio_bytes=audio_bytes,
-                        audio_filename=filename,
-                        mime_type=mime_type,
-                        spectrograms=spectrograms,
-                        metadata={
-                            "model_name": JOBS[job_id].get("model_name"),
-                            "prompt": base_args.get("prompt", ""),
-                            "negative_prompt": base_args.get("negative_prompt"),
-                            "duration": base_args.get("duration"),
-                            "steps": args.get("steps"),
-                            "cfg_scale": args.get("cfg_scale"),
-                            "seed": args.get("seed"),
-                        },
-                    )
-                    _spec_cache[f"{job_id}:{i}"] = spectrograms
+                    def _do_specs_and_save():
+                        waveform, sr = torchaudio.load(io.BytesIO(audio_bytes))
+                        spectrograms = _generate_spectrograms(waveform, sr)
+                        artifact_info = _save_generation_artifacts_sync(
+                            job_id=job_id,
+                            index=i,
+                            audio_bytes=audio_bytes,
+                            audio_filename=filename,
+                            mime_type=mime_type,
+                            spectrograms=spectrograms,
+                            metadata={
+                                "model_name": JOBS[job_id].get("model_name"),
+                                "prompt": base_args.get("prompt", ""),
+                                "negative_prompt": base_args.get("negative_prompt"),
+                                "duration": base_args.get("duration"),
+                                "steps": args.get("steps"),
+                                "cfg_scale": args.get("cfg_scale"),
+                                "seed": args.get("seed"),
+                            },
+                        )
+                        return spectrograms, artifact_info
+                        
+                    spectrograms, artifact_info = await loop.run_in_executor(None, _do_specs_and_save)
+
+                    _add_to_spec_cache(f"{job_id}:{i}", spectrograms)
                     if i == 0:
-                        _spec_cache[job_id] = spectrograms
+                        _add_to_spec_cache(job_id, spectrograms)
                     items.append(
                         {
                             "audio_base64": base64.b64encode(audio_bytes).decode(

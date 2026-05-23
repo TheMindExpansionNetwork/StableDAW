@@ -140,7 +140,10 @@ See [docs/workflows/autoencoder.md](docs/workflows/autoencoder.md) for batch enc
 ### Generation (CREATE tab)
 - Text-to-audio, audio-to-audio, and inpainting/continuation from a single form.
 - Per-field controls: model selector (auto-adjusts steps/CFG for RF variants), duration, batch size, sampler steps, CFG scale, and seed with one-click reroll.
-- Magic prompt button populates a sample prompt when the field is empty.
+- Magic prompt button populates a sample prompt when the field is empty. Clicking the sparkles icon sends the current text to the AI Assistant to optimize the prompt for Stable Audio conditioning.
+- The Advanced Generation Panel provides a dense layout containing Output Settings for automatic playback and downloading. Quick Actions route generated audio directly to the Waveform Editor, Init Audio, or Inpainting modules.
+- A standalone Templates Panel allows users to save and restore full generation parameters. A Saved Prompts Dropdown maintains a history of user-defined prompts.
+- A Spectrogram Viewer displays Mel, STFT, Chromagram, and CQT visualizations of generated audio.
 - Inpainting: WaveSurfer waveform preview with draggable purple region defining the regeneration window; mask coordinates are computed relative to the visible clip region to handle trimmed and split clips correctly.
 - Async job queue: submit, then poll `/api/jobs/{id}` at 1-second intervals until completion; binary abort available mid-flight.
 - All completed generations auto-save to the persistent IndexedDB library.
@@ -157,6 +160,7 @@ See [docs/workflows/autoencoder.md](docs/workflows/autoencoder.md) for batch enc
 - Multiple LoRAs stack additively; each is independently configurable.
 - Pre-computed SVD bases (`--svd_bases_path`) accelerate startup for `-XS` adapter variants.
 - VRAM reduction via `--base_precision bf16`.
+- Certain training endpoints are currently unimplemented on the backend and return HTTP 501 status codes. The frontend intercepts these responses to provide specific error messages in the user interface instead of generic network errors.
 
 ### Library (LIBRARY tab)
 - Persistent IndexedDB storage (`sa3-library` / `generations` object store). Every generation auto-saves with full metadata (prompt, model, duration, steps, CFG, seed, MIME type, timestamp).
@@ -197,7 +201,7 @@ See [docs/workflows/autoencoder.md](docs/workflows/autoencoder.md) for batch enc
 
 ### Media Bucket (bottom panel)
 - Session-scoped drag-and-drop holding area for arbitrary audio files.
-- Drop or click-to-upload multiple files; supported formats: WAV, MP3, FLAC, OGG, AAC, M4A, Opus.
+- Drop or click-to-upload multiple files; supported formats: WAV, MP3, FLAC, OGG, AAC, M4A, Opus. Users can drag entries from the Library tab and drop them directly into the Media Bucket, Waveform Editor, and Step Sequencer using the application/x-stabledaw-library-id data transfer protocol to locate the source file from the IndexedDB store.
 - Per-item actions: **Send to Editor** (decodes peaks and appends to the waveform editor as a new track), **Send to Library** (decodes audio, measures duration, and persists the entry to IndexedDB), **Remove**.
 - Clear all button.
 
@@ -214,7 +218,7 @@ See [docs/workflows/autoencoder.md](docs/workflows/autoencoder.md) for batch enc
 - Fixed to the viewport bottom across all views and tabs.
 - Track info: current title, model chip (or LIBRARY / IDLE), and total duration at 48 kHz.
 - Transport: play/pause (dispatches to `playerStore` or triggers the first editor timeline render via `editorPlaybackBridge`), skip to start, skip to end, loop toggle.
-- Seekable progress bar (click-to-seek, hover reveals a scrubber handle).
+- Seekable progress bar (click-to-seek, hover reveals a scrubber handle). The Player Footer synchronizes its playhead position with the Waveform Editor. Scrubbing the transport progress bar updates the editor timeline position when the editor timeline is the active audio source.
 - Volume slider and mute toggle; drives the `playbackStore` master gain shared by all audio sources.
 - Download button retrieves the currently loaded library entry.
 - Like / share decorative actions (heartbeat state persisted per session).

@@ -6,6 +6,7 @@ import { ProviderModelSelector, type ModelInfo } from './ProviderModelSelector';
 import { actionFromAssistantEvent, statusFromAssistantEvent } from './assistantEvents';
 import { buildStableDAWAppContext } from './appContext';
 import { uuid } from './utils';
+import { useStatusBarStore } from '../state/statusBarStore';
 
 // Inline clipboard helper (no external util available in StableDAW)
 const copyToClipboard = (text: string) => navigator.clipboard.writeText(text).catch(() => {});
@@ -130,6 +131,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({
     onExecuteAction,
     orbPosition = { x: 20, y: typeof window !== 'undefined' ? window.innerHeight - 140 : 500 },
 }) => {
+    const isBackendReady = useStatusBarStore((s) => s.isBackendReady);
     const initialAssistantSelection = useMemo(readInitialAssistantSelection, []);
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
@@ -268,7 +270,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({
        } catch {}
     }, []);
 
-    useEffect(() => { refreshKeyStatus(); }, []);
+    useEffect(() => { if (isBackendReady) void refreshKeyStatus(); }, [isBackendReady, refreshKeyStatus]);
 
     const ingestKeys = async (providerId: string, raw: string) => {
        if (!raw.trim()) return;
@@ -316,6 +318,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({
     const [loadingModels, setLoadingModels] = useState<string | null>(null);
 
     useEffect(() => {
+       if (!isBackendReady) return;
        fetch('/api/assistant/providers').then(r => {
           if (!r.ok) throw new Error(`${r.status}`);
           return r.json();
@@ -325,16 +328,16 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({
        }).catch(() => {
           setProviderCatalog(DEFAULT_PROVIDERS);
        });
-    }, []);
+    }, [isBackendReady]);
 
      const resolveClaudeMode = (model: string) => {
          if (model.startsWith('claude-code-')) return model.replace('claude-code-', '');
          return claudeMode || DEFAULT_CLAUDE_MODE;
      };
 
-    // Fetch models when provider changes
+    // Fetch models when provider changes — only after backend is reachable
     useEffect(() => {
-       if (!selectedProvider) return;
+       if (!isBackendReady || !selectedProvider) return;
        if (providerModels[selectedProvider]?.length && !failedFetches.current.has(selectedProvider)) return;
 
        setLoadingModels(selectedProvider);
@@ -365,7 +368,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({
              setProviderModels(prev => ({ ...prev, [selectedProvider]: [prov.default_model] }));
           }
        }).finally(() => setLoadingModels(null));
-    }, [selectedProvider, providerCatalog]);
+    }, [isBackendReady, selectedProvider, providerCatalog]);
 
     // Normalize a raw model entry (string | ModelInfo) into a ModelInfo object
     const normalizeModel = (m: string | ModelInfo): ModelInfo =>

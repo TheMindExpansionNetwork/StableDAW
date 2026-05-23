@@ -264,6 +264,32 @@ export const WaveformEditor: React.FC<{ onSwitchTab?: (tab: string) => void }> =
     const sel = useEditorStore.getState().inpaintSelection;
     if (!sel) return;
     updateClip(sel.clipId, { audioBlob: blob, mimeType: 'audio/wav', peaks: undefined });
+    
+    // Auto-save the accepted inpaint to the library
+    try {
+      useLibraryStore.getState().addEntry({
+        id: `inpaint-${Date.now()}`,
+        title: `inpaint_${inpaintPrompt.slice(0, 15) || 'result'}.wav`,
+        prompt: inpaintPrompt,
+        negativePrompt: '',
+        model: 'inpaint',
+        duration: sel.endSec - sel.startSec,
+        steps: inpaintSteps,
+        cfg: 1.0,
+        seed: inpaintSeed,
+        audioBlob: blob,
+        mimeType: 'audio/wav',
+        timestamp: new Date().toISOString(),
+        favorite: false,
+        rating: null,
+        tags: ['inpaint'],
+        notes: '',
+        source: 'generate',
+      }).catch(e => logError('editor', `Inpaint library save failed: ${e}`));
+    } catch (e) {
+      logError('editor', `Inpaint library save failed: ${e}`);
+    }
+
     clearInpaintSelection();
     setInpaintPanel(null);
   };

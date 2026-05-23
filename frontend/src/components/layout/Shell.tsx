@@ -8,9 +8,8 @@ import { TrainingView } from '../../views/TrainingView';
 import { ResizablePanel } from './ResizablePanel';
 import { DAWCenterPanel } from './DAWCenterPanel';
 import { ProcessingLog } from './ProcessingLog';
-import { GlobalGenerateBar } from './GlobalGenerateBar';
 import { DocsModal } from './DocsModal';
-import { useStatusBarStore } from '../../state/statusBarStore';
+import { SettingsModal } from './SettingsModal';
 import { useAppUiStore } from '../../state/appUiStore';
 
 export const Shell: React.FC = () => {
@@ -20,15 +19,7 @@ export const Shell: React.FC = () => {
   const setIsLeftPanelOpen = useAppUiStore((state) => state.setLeftPanelOpen);
   const docsOpen = useAppUiStore((state) => state.docsOpen);
   const setDocsOpen = useAppUiStore((state) => state.setDocsOpen);
-  const refreshHealth = useStatusBarStore((state) => state.refreshHealth);
-
-  useEffect(() => {
-    void refreshHealth();
-    const timer = window.setInterval(() => {
-      void refreshHealth();
-    }, 30000);
-    return () => window.clearInterval(timer);
-  }, [refreshHealth]);
+  const [settingsOpen, setSettingsOpen] = React.useState(false);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -55,7 +46,7 @@ export const Shell: React.FC = () => {
 
   const tabs = [
     { id: 'create', label: 'CREATE' },
-    { id: 'edit', label: 'EDIT' },
+    { id: 'edit', label: 'PROCESS' },
     { id: 'train', label: 'TRAIN' },
     { id: 'library', label: 'LIBRARY' },
   ];
@@ -82,32 +73,28 @@ export const Shell: React.FC = () => {
                 <ChevronRight className="w-4 h-4 text-zinc-500 hover:text-white transition-colors" />
               </button>
             )}
-            <span className="w-1.5 h-1.5 rounded-full bg-purple-500 shadow-[0_0_8px_rgba(139,92,246,1)]" />
           </h2>
+        </div>
+        <div className="flex items-center gap-2.5">
           <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 bg-white/5 rounded-full border border-white/5">
             <Search className="w-3 h-3 text-zinc-600" />
             <input type="text" placeholder="G-SEARCH..." className="bg-transparent border-none outline-none text-[9px] text-zinc-500 w-32 font-mono" />
           </div>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2.5">
-            <button
-              onClick={() => setDocsOpen(true)}
-              className="p-1.5 rounded hover:bg-purple-500/15 transition-colors border border-purple-500/20 group flex items-center gap-1.5"
-              title="Open documentation"
-            >
-              <BookOpen className="w-3.5 h-3.5 text-purple-300 group-hover:text-purple-200" />
-              <span className="text-[9px] font-black uppercase tracking-widest text-purple-300 group-hover:text-purple-200 pr-1">Docs</span>
-            </button>
-            <button className="p-1.5 rounded hover:bg-white/5 transition-colors border border-white/5 group">
-              <Settings className="w-3.5 h-3.5 text-zinc-500 group-hover:rotate-90 transition-transform duration-500" />
-            </button>
-            <div className="flex items-center gap-2.5 pl-2 border-l border-white/5">
-              <div className="w-7 h-7 rounded bg-linear-to-tr from-purple-500 to-indigo-600 border border-white/20 p-0.5 shadow-xl">
-                <div className="w-full h-full rounded bg-[#0a080f] flex items-center justify-center font-bold text-[10px]">U</div>
-              </div>
-            </div>
-          </div>
+          <button
+            onClick={() => setDocsOpen(true)}
+            className="p-1.5 rounded hover:bg-purple-500/15 transition-colors border border-purple-500/20 group flex items-center gap-1.5"
+            title="Open documentation"
+          >
+            <BookOpen className="w-3.5 h-3.5 text-purple-300 group-hover:text-purple-200" />
+            <span className="text-[9px] font-black uppercase tracking-widest text-purple-300 group-hover:text-purple-200 pr-1">Docs</span>
+          </button>
+          <button
+            onClick={() => setSettingsOpen(true)}
+            className="p-1.5 rounded hover:bg-white/5 transition-colors border border-white/5 group"
+            title="Settings"
+          >
+            <Settings className="w-3.5 h-3.5 text-zinc-500 group-hover:rotate-90 transition-transform duration-500" />
+          </button>
         </div>
       </header>
 
@@ -159,10 +146,6 @@ export const Shell: React.FC = () => {
              </AnimatePresence>
           </div>
 
-          {/* Pinned CREATE-tab CTA: output progress + RUN button. Hard structural
-              attachment as flex sibling of ProcessingLog so it can't desync. */}
-          {activeView === 'create' && <GlobalGenerateBar />}
-
           {/* Global Processing Log */}
           <ProcessingLog />
         </div>
@@ -174,6 +157,7 @@ export const Shell: React.FC = () => {
       </main>
       </div>
       <DocsModal open={docsOpen} onClose={() => setDocsOpen(false)} />
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   );
 };

@@ -67,6 +67,7 @@ interface GenerateStoreState {
   progressPct: number;
   currentJobId: string | null;
   lastAudioUrl: string | null;
+  lastAudioBlob: Blob | null;
   lastFilename: string | null;
   lastDurationSec: number | null;
   lastModelName: string | null;
@@ -239,6 +240,7 @@ export const useGenerateStore = create<GenerateStoreState>()((set, get) => ({
   progressPct: 0,
   currentJobId: null,
   lastAudioUrl: null,
+  lastAudioBlob: null,
   lastFilename: null,
   lastDurationSec: null,
   lastModelName: null,
@@ -267,6 +269,7 @@ export const useGenerateStore = create<GenerateStoreState>()((set, get) => ({
       currentJobId: null,
       error: null,
       lastAudioUrl: null,
+      lastAudioBlob: null,
       lastFilename: null,
       pollRunId: nextRunId,
     });
@@ -276,6 +279,7 @@ export const useGenerateStore = create<GenerateStoreState>()((set, get) => ({
     const formData = buildGenerateJobFormData(params, prompt);
 
     try {
+      logInfo('generate', `POST /api/generate-jobs — model=${params.model} duration=${params.duration}s steps=${params.steps} seed=${params.seed}`);
       const response = await fetch('/api/generate-jobs', {
         method: 'POST',
         body: formData,
@@ -289,14 +293,18 @@ export const useGenerateStore = create<GenerateStoreState>()((set, get) => ({
       }
 
       if (!response.ok) {
-        throw new Error(getErrorMessage(payload, `Generation request failed with HTTP ${response.status}.`));
+        const detail = getErrorMessage(payload, `HTTP ${response.status} ${response.statusText}`);
+        logError('generate', `POST /api/generate-jobs → ${response.status} ${response.statusText} — ${detail}`);
+        throw new Error(detail);
       }
 
       const jobId = (payload as { job?: { id?: string } })?.job?.id;
       if (!jobId) {
+        logError('generate', 'POST /api/generate-jobs → 200 OK but no job_id in response payload');
         throw new Error('Backend did not return a job id for /api/generate-jobs.');
       }
 
+      logInfo('generate', `POST /api/generate-jobs → 200 OK — job_id=${jobId.slice(0, 8)}`);
       set({
         currentJobId: jobId,
         jobStatus: 'queued',
@@ -320,7 +328,19 @@ export const useGenerateStore = create<GenerateStoreState>()((set, get) => ({
         }
 
         if (!jobResponse.ok) {
-          throw new Error(getErrorMessage(jobPayload, `Job polling failed with HTTP ${jobResponse.status}.`));
+          if (jobResponse.status === 404) {
+            logError('generate', `Job ${jobId.slice(0, 8)} not found on server (it may have restarted). Aborting.`);
+            set({
+              isGenerating: false,
+              jobStatus: 'failed',
+              statusLabel: 'SERVER RESET',
+              error: 'Server restarted or lost job. Please try again.',
+            });
+            return;
+          }
+          const detail = getErrorMessage(jobPayload, `HTTP ${jobResponse.status} ${jobResponse.statusText}`);
+          logError('generate', `GET /api/jobs/${jobId.slice(0, 8)} → ${jobResponse.status} ${jobResponse.statusText} — ${detail}`);
+          throw new Error(`Job polling failed: ${detail}`);
         }
 
         const job = jobPayload as {
@@ -348,7 +368,7 @@ export const useGenerateStore = create<GenerateStoreState>()((set, get) => ({
           set({
             jobStatus: job.status,
             isGenerating: true,
-            statusLabel: job.status === 'queued' ? 'QUEUED...' : `SAMPLING ${step}/${totalSteps}`,
+            statusLabel: job.status === 'queued' ? 'QUEUED...' : `SAMPLING ${progressPct}%`,
             progressPct,
           });
           await wait(POLL_INTERVAL_MS);
@@ -362,20 +382,23 @@ export const useGenerateStore = create<GenerateStoreState>()((set, get) => ({
             throw new Error('Generation completed but no audio payload was returned.');
           }
 
-          const audioUrl = decodeAudioToBlobUrl(resultItem.audio_base64, resultItem.mime_type || 'audio/wav');
+          const resultMime = resultItem.mime_type || 'audio/wav';
+          const resultBlob = base64ToBlob(resultItem.audio_base64, resultMime);
+          const audioUrl = URL.createObjectURL(resultBlob);
           set({
             isGenerating: false,
             jobStatus: 'completed',
             statusLabel: 'COMPLETE',
             progressPct: 100,
             lastAudioUrl: audioUrl,
+            lastAudioBlob: resultBlob,
             lastFilename: resultItem.filename || 'output.wav',
             lastDurationSec: params.duration,
             lastModelName: params.model,
             error: null,
           });
-          useStatusBarStore.getState().setText('GENERATION COMPLETE');
-          logInfo('generate', `Completed: ${resultItem.filename || 'output.wav'} (${params.duration}s)`);
+          useStatusBarStore.getState().setText('GENERATION COMPLETE & SAVED TO LIBRARY');
+          logInfo('generate', `Completed: ${resultItem.filename || 'output.wav'} (${params.duration}s, ${Math.round(resultBlob.size / 1024)}KB)`);
 
           // Auto-add all returned items (handles batch) to the library, and
           // auto-load the first one into the global footer player.
@@ -476,6 +499,7 @@ export const useGenerateStore = create<GenerateStoreState>()((set, get) => ({
     }
     set({
       lastAudioUrl: null,
+      lastAudioBlob: null,
       lastFilename: null,
       lastDurationSec: null,
       lastModelName: null,

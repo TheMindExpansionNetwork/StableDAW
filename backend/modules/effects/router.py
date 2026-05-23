@@ -119,7 +119,7 @@ def _validate_param(value: float, bounds: tuple[float, float], name: str) -> flo
     return val
 
 
-def _build_filter(effect: str, params: dict[str, float]) -> list[str]:
+def _build_filter(effect: str, params: dict[str, float], output_format: str = "wav") -> list[str]:
     """Build FFmpeg audio filter arguments. Returns ['-af', 'filter_string'] or more complex args."""
     if effect == "mastering_chain":
         low_boost = params["lowBoost"]
@@ -130,10 +130,13 @@ def _build_filter(effect: str, params: dict[str, float]) -> list[str]:
             f"anequalizer=c0 f=40 w=80 g={low_boost} t=1|c0 f=10000 w=5000 g={high_boost} t=2,"
             f"compand=attacks=0.001:decays=0.3:points=-80/-80|-40/-20|-20/-10|0/-5,"
             f"alimiter=limit={limiter},"
-            f"loudnorm=I={lufs}:LRA=7:TP=-1,"
-            f"aformat=sample_fmts=s32:sample_rates=96000"
+            f"loudnorm=I={lufs}:LRA=7:TP=-1"
         )
-        return ["-af", af, "-c:a", "pcm_s24le"]
+        # pcm_s24le is only valid in WAV containers; let FFmpeg pick the right
+        # codec for every other format (mp3 → libmp3lame, aac → aac, etc.)
+        if output_format == "wav":
+            return ["-af", af, "-c:a", "pcm_s24le"]
+        return ["-af", af]
 
     elif effect == "compression":
         attack = params["attack"]
@@ -312,13 +315,19 @@ async def studio_process(
 
     # Build filter args
     try:
-        filter_args = _build_filter(effect, validated)
+        filter_args = _build_filter(effect, validated, output_format)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    # Process with FFmpeg in a temp directory. We do NOT use a finally-cleanup
-    # here because FileResponse streams the output file lazily — cleanup is
-    # deferred to a BackgroundTask that runs after the response is sent.
+    mime_types = {
+        "wav": "audio/wav",
+        "flac": "audio/flac",
+        "ogg": "audio/ogg",
+        "mp3": "audio/mpeg",
+        "aac": "audio/aac",
+        "opus": "audio/opus",
+    }
+
     tmp_dir = tempfile.mkdtemp(prefix="studio_")
     cleanup = BackgroundTask(shutil.rmtree, tmp_dir, ignore_errors=True)
     try:
@@ -340,7 +349,6 @@ async def studio_process(
             str(output_path),
         ]
 
-        # Async subprocess — does NOT block the event loop while ffmpeg runs.
         proc = await asyncio.create_subprocess_exec(
             *cmd,
             stdout=asyncio.subprocess.DEVNULL,
@@ -366,17 +374,6 @@ async def studio_process(
             shutil.rmtree(tmp_dir, ignore_errors=True)
             raise HTTPException(status_code=500, detail="FFmpeg produced no output")
 
-        mime_types = {
-            "wav": "audio/wav",
-            "flac": "audio/flac",
-            "ogg": "audio/ogg",
-            "mp3": "audio/mpeg",
-            "aac": "audio/aac",
-            "opus": "audio/opus",
-        }
-
-        # FileResponse streams the file directly from disk and runs `cleanup`
-        # after the bytes are delivered — no in-memory copy of the output.
         return FileResponse(
             path=output_path,
             media_type=mime_types.get(output_format, "audio/wav"),
