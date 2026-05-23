@@ -39,12 +39,12 @@ dependencies = [
 
 [project.optional-dependencies]
 ui = [
-  "gradio==6.3.0",
+  "gradio==6.7.0",
   "accelerate>=1.13.0",
 ]
 
 lora = [
-  "pytorch_lightning==2.5.5",
+  "pytorch_lightning==2.6.1",
   "dill>=0.4.1",
 ]
 
