@@ -629,7 +629,7 @@ export const StepSequencer: React.FC = () => {
       <div className="flex-1 overflow-y-auto p-2 space-y-1 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]">
         {tracks.map((track) => (
           <div key={track.id} className="flex gap-2 group">
-            <div className="w-32 flex-shrink-0 flex flex-col bg-black/40 rounded p-1.5 border border-white/5 group-hover:border-white/10 transition-colors">
+            <div className="w-32 shrink-0 flex flex-col bg-black/40 rounded p-1.5 border border-white/5 group-hover:border-white/10 transition-colors">
               <div className="flex justify-between items-center mb-1 gap-1">
                 <input
                   type="text"
@@ -666,7 +666,7 @@ export const StepSequencer: React.FC = () => {
                   key={i}
                   onClick={() => toggleStep(track.id, i)}
                   className={`relative aspect-square rounded-sm border transition-all
-                    ${active ? 'shadow-[0_0_10px]' : 'border-white/5 hover:border-white/20 bg-white/[0.02]'}
+                    ${active ? 'shadow-[0_0_10px]' : 'border-white/5 hover:border-white/20 bg-white/2'}
                     ${i === currentStep && isPlaying ? 'ring-1 ring-white z-10 scale-110' : ''}
                     ${i % 4 === 0 ? 'opacity-100' : 'opacity-70'}
                   `}
@@ -704,7 +704,7 @@ export const StepSequencer: React.FC = () => {
         ))}
 
         <div className="flex gap-2 mt-1">
-          <div className="w-32 flex-shrink-0" />
+          <div className="w-32 shrink-0" />
           <div className="flex-1 grid grid-cols-16 gap-1">
             {Array.from({ length: STEPS }).map((_, i) => (
               <div key={i} className="flex justify-center">

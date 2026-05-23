@@ -21,7 +21,15 @@ export default defineConfig(({mode}) => {
       port: 5173,
       strictPort: true,
       proxy: {
-        '/api': 'http://localhost:8600',
+        '/api': {
+          target: 'http://localhost:8600',
+          changeOrigin: true,
+          // Audio processing (effects, generate) can take minutes for large
+          // files. The default proxy timeout closes the socket and the browser
+          // shows "Failed to fetch". Disable both timeouts.
+          timeout: 0,
+          proxyTimeout: 0,
+        },
       },
       hmr: process.env.ENABLE_HMR === 'true',
       watch: process.env.ENABLE_HMR === 'true' ? undefined : null,

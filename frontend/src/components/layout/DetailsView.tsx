@@ -32,8 +32,8 @@ const Row: React.FC<{ icon?: React.ComponentType<{ className?: string }>; label:
   value,
   mono = true,
 }) => (
-  <div className="flex items-center gap-3 py-1 border-b border-white/[0.04]">
-    <div className="w-24 flex items-center gap-1.5 flex-shrink-0">
+  <div className="flex items-center gap-3 py-1 border-b border-white/4">
+    <div className="w-24 flex items-center gap-1.5 shrink-0">
       {Icon && <Icon className="w-2.5 h-2.5 text-zinc-600" />}
       <span className="text-[8px] font-mono uppercase tracking-widest text-zinc-500">{label}</span>
     </div>
@@ -110,7 +110,7 @@ export const DetailsView: React.FC = () => {
             {entry.prompt || <em className="text-zinc-700">No prompt</em>}
           </p>
         </div>
-        <div className="flex items-center gap-1.5 flex-shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0">
           <button onClick={handleAuditionInEngine} className="btn-ghost text-[9px] py-1 flex items-center gap-1" title="Load + play in global player">
             <Disc className="w-3 h-3 text-purple-300" /> AUDITION
           </button>

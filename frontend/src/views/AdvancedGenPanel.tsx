@@ -32,14 +32,14 @@ function SField({ label, value, onChange, min, max, step = 0.01, hint, defaultVa
   return (
     <div className="flex flex-col gap-0.5 min-w-0">
       <div className="flex items-center gap-2">
-        <div className="min-w-0 w-[70px]">{tip ? <HoverTip text={tip}>{labelEl}</HoverTip> : labelEl}</div>
+        <div className="min-w-0 w-17.5">{tip ? <HoverTip text={tip}>{labelEl}</HoverTip> : labelEl}</div>
         <input type="range" className="pro-slider flex-1" min={min} max={max} step={step}
           value={value} onChange={(e) => onChange(+e.target.value)} />
         <input type="number" className="compact-input w-14 text-center text-[10px] tabular-nums shrink-0"
           min={min} max={max} step={step} value={value} onChange={(e) => onChange(+e.target.value || 0)} />
       </div>
       {defaultValue !== undefined && (
-        <span className="text-[8px] text-zinc-500 ml-[78px]">Default: {defaultValue.toFixed(1)}</span>
+        <span className="text-[8px] text-zinc-500 ml-19.5">Default: {defaultValue.toFixed(1)}</span>
       )}
     </div>
   );
@@ -160,7 +160,7 @@ function SavedPromptsDropdown({ type, value, onChange }: {
         <Plus className="w-3 h-3" />
       </button>
       {open && (
-        <div className="absolute z-30 top-full right-0 mt-1 bg-[var(--panel)] border border-[var(--panel-border)] rounded shadow-2xl min-w-[220px] max-h-[180px] overflow-hidden flex flex-col">
+        <div className="absolute z-30 top-full right-0 mt-1 bg-(--panel) border border-(--panel-border) rounded shadow-2xl min-w-55 max-h-45 overflow-hidden flex flex-col">
           <div className="flex-1 overflow-y-auto">
             {saved.length === 0 ? (
               <div className="px-3 py-2 text-[9px] text-zinc-600 text-center">No saved prompts</div>
@@ -222,7 +222,7 @@ function TemplatesPanel() {
         </button>
       </div>
       <div className="flex items-center gap-1 mb-1.5">
-        <Search className="w-3 h-3 text-zinc-600 flex-shrink-0" />
+        <Search className="w-3 h-3 text-zinc-600 shrink-0" />
         <input className="compact-input flex-1 text-[9px]" placeholder="Search templates..." value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)} />
       </div>
@@ -424,7 +424,7 @@ export const AdvancedGenPanel: React.FC<{
               </div>
               <div className="relative flex-1">
                 <textarea
-                  className="compact-input w-full resize-none h-full min-h-[80px]"
+                  className="compact-input w-full resize-none h-full min-h-20"
                   placeholder="120 BPM house loop, deep sub bass, crispy hi-hats, minimal percussion..."
                   value={p.prompt}
                   onChange={(e) => sf('prompt', e.target.value)}
@@ -458,7 +458,7 @@ export const AdvancedGenPanel: React.FC<{
               </div>
               <div className="relative flex-1">
                 <textarea
-                  className="compact-input w-full resize-none h-full min-h-[80px]"
+                  className="compact-input w-full resize-none h-full min-h-20"
                   placeholder="vocals, speech, distortion, harshness..."
                   value={p.negativePrompt}
                   onChange={(e) => sf('negativePrompt', e.target.value)}
@@ -480,7 +480,7 @@ export const AdvancedGenPanel: React.FC<{
                 <Plus className="w-3 h-3" />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto min-h-0 max-h-[80px]">
+            <div className="flex-1 overflow-y-auto min-h-0 max-h-20">
               {p.loras.length > 0 ? p.loras.map((lora, i) => (
                 <div key={i} className="flex items-center gap-1 bg-purple-500/5 rounded px-1.5 py-1 border border-purple-500/10 mb-1">
                   {lora.file ? (
@@ -577,11 +577,11 @@ export const AdvancedGenPanel: React.FC<{
               onChange={(e) => { if (e.target.files?.[0]) patch({ initAudioFile: e.target.files[0], initAudioEnabled: true }); e.target.value = ''; }} />
           </div>
           {initAudioUrl ? (
-            <div className="rounded overflow-hidden border border-white/5 bg-black/40 h-[110px] mb-2">
+            <div className="rounded overflow-hidden border border-white/5 bg-black/40 h-27.5 mb-2">
               <WaveformPreview audioUrl={initAudioUrl} height={110} />
             </div>
           ) : (
-            <div className="rounded border border-dashed border-white/10 bg-zinc-900/50 h-[110px] mb-2 flex items-center justify-center">
+            <div className="rounded border border-dashed border-white/10 bg-zinc-900/50 h-27.5 mb-2 flex items-center justify-center">
               <span className="text-[9px] text-zinc-600">No audio loaded</span>
             </div>
           )}
@@ -627,14 +627,14 @@ export const AdvancedGenPanel: React.FC<{
           </div>
           {inpaintAudioUrl ? (
             <>
-              <div className="rounded overflow-hidden border border-white/5 bg-black/40 h-[110px] mb-2">
+              <div className="rounded overflow-hidden border border-white/5 bg-black/40 h-27.5 mb-2">
                 <WaveformPreview audioUrl={inpaintAudioUrl} height={110} enableRegions regionStart={p.maskStart} regionEnd={p.maskEnd}
                   onRegionChange={(s, e) => patch({ maskStart: s, maskEnd: e })} />
               </div>
               <div className="text-[10px] font-mono text-purple-300">Start: {p.maskStart.toFixed(2)}s  End: {p.maskEnd.toFixed(2)}s</div>
             </>
           ) : (
-            <div className="rounded border border-dashed border-white/10 bg-zinc-900/50 h-[110px] flex items-center justify-center">
+            <div className="rounded border border-dashed border-white/10 bg-zinc-900/50 h-27.5 flex items-center justify-center">
               <span className="text-[9px] text-zinc-600">No file loaded</span>
             </div>
           )}
@@ -770,7 +770,7 @@ export const AdvancedGenPanel: React.FC<{
           {lastAudioUrl ? (
             <>
               <div className="mb-2"><FullAudioPlayer src={lastAudioUrl} /></div>
-              <div className="rounded overflow-hidden border border-white/5 bg-black/40 h-[110px]">
+              <div className="rounded overflow-hidden border border-white/5 bg-black/40 h-27.5">
                 <WaveformPreview audioUrl={lastAudioUrl} height={110} />
               </div>
             </>

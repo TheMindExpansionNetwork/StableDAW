@@ -42,14 +42,14 @@ export function HoverTip({ text, children }: { text: string; children: React.Rea
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 4 }}
             transition={{ duration: 0.12 }}
-            className="fixed z-[9999] pointer-events-none"
+            className="fixed z-9999 pointer-events-none"
             style={{
               left: pos.x,
               top: pos.y,
               transform: 'translate(-50%, -100%)',
             }}
           >
-            <div className="max-w-[260px] px-3 py-2 rounded-lg bg-zinc-900/95 border border-purple-500/20 shadow-2xl shadow-purple-900/20 backdrop-blur-sm">
+            <div className="max-w-65 px-3 py-2 rounded-lg bg-zinc-900/95 border border-purple-500/20 shadow-2xl shadow-purple-900/20 backdrop-blur-sm">
               <p className="text-[10px] leading-relaxed text-zinc-300">{text}</p>
             </div>
           </motion.div>
@@ -115,7 +115,7 @@ export function InfoTip({ title, body }: { title: string; body: string }) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -4 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="absolute z-[9999] left-0 top-full mt-1.5"
+            className="absolute z-9999 left-0 top-full mt-1.5"
             style={{ minWidth: '280px', maxWidth: '340px' }}
           >
             <div className="rounded-lg bg-zinc-900/95 border border-purple-500/25 shadow-2xl shadow-purple-900/30 backdrop-blur-sm overflow-hidden">
@@ -131,7 +131,7 @@ export function InfoTip({ title, body }: { title: string; body: string }) {
                 </button>
               </div>
               {/* body */}
-              <div className="px-3 py-2.5 max-h-[280px] overflow-y-auto">
+              <div className="px-3 py-2.5 max-h-70 overflow-y-auto">
                 {lines.map((line, i) => {
                   if (line.trim() === '') return <div key={i} className="h-1.5" />;
                   if (line.startsWith('•')) {

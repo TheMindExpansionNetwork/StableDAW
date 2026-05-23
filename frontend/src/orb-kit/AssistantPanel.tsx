@@ -689,10 +689,10 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({
                     width: '280px',
                 }}
             >
-                <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-primary/10 via-purple-500/10 to-pink-500/10">
+                <div className="flex items-center justify-between px-4 py-3 bg-linear-to-r from-primary/10 via-purple-500/10 to-pink-500/10">
                     <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary via-purple-500 to-pink-500 flex items-center justify-center relative">
-                            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary via-purple-500 to-pink-500 animate-spin-slow opacity-50 blur-sm"></div>
+                        <div className="w-6 h-6 rounded-full bg-linear-to-br from-primary via-purple-500 to-pink-500 flex items-center justify-center relative">
+                            <div className="absolute inset-0 rounded-full bg-linear-to-br from-primary via-purple-500 to-pink-500 animate-spin-slow opacity-50 blur-sm"></div>
                             <div className="w-3 h-3 rounded-full bg-white/90 z-10"></div>
                         </div>
                         <span className="font-semibold text-sm">StableDAW</span>
@@ -735,10 +735,10 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({
             }}
         >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-gradient-to-r from-primary/10 via-purple-500/10 to-pink-500/10">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-linear-to-r from-primary/10 via-purple-500/10 to-pink-500/10">
                 <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary via-purple-500 to-pink-500 flex items-center justify-center animate-pulse relative">
-                        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary via-purple-500 to-pink-500 animate-spin-slow opacity-50 blur-sm"></div>
+                    <div className="w-8 h-8 rounded-full bg-linear-to-br from-primary via-purple-500 to-pink-500 flex items-center justify-center animate-pulse relative">
+                        <div className="absolute inset-0 rounded-full bg-linear-to-br from-primary via-purple-500 to-pink-500 animate-spin-slow opacity-50 blur-sm"></div>
                         <div className="w-4 h-4 rounded-full bg-white/90 z-10"></div>
                     </div>
                     <div>
@@ -789,7 +789,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({
                     </div>
 
                     {settingsTab === 'model' && (
-                        <div className="px-4 py-2.5 bg-gradient-to-r from-blue-500/10 to-purple-500/10 space-y-2">
+                        <div className="px-4 py-2.5 bg-linear-to-r from-blue-500/10 to-purple-500/10 space-y-2">
                             <ProviderModelSelector
                                 providers={providers}
                                 selectedProvider={selectedProvider}
@@ -810,7 +810,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({
                     )}
 
                     {settingsTab === 'keys' && (
-                        <div className="px-4 py-2.5 bg-gradient-to-r from-purple-500/10 to-pink-500/10 space-y-1 max-h-56 overflow-y-auto custom-scrollbar">
+                        <div className="px-4 py-2.5 bg-linear-to-r from-purple-500/10 to-pink-500/10 space-y-1 max-h-56 overflow-y-auto custom-scrollbar">
                             {providerCatalog.filter(p => p.id !== 'claude' && !p.is_local).map(p => {
                                 const pool = keyPools[p.id];
                                 const keyCount = pool?.total || 0;
@@ -891,7 +891,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({
             <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
                 {messages.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-center px-2">
-                        <div className="w-14 h-14 rounded-full bg-gradient-to-br from-primary/20 via-purple-500/20 to-pink-500/20 flex items-center justify-center mb-3 animate-pulse">
+                        <div className="w-14 h-14 rounded-full bg-linear-to-br from-primary/20 via-purple-500/20 to-pink-500/20 flex items-center justify-center mb-3 animate-pulse">
                             <Sparkles size={28} className="text-primary" />
                         </div>
                         <h3 className="text-base font-bold mb-1">How can I help?</h3>
@@ -922,7 +922,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({
                             className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                         >
                             {msg.role === 'assistant' && (
-                                <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${msg.isError ? 'bg-red-500/20' : 'bg-gradient-to-br from-primary to-pink-500'}`}>
+                                <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${msg.isError ? 'bg-red-500/20' : 'bg-linear-to-br from-primary to-pink-500'}`}>
                                     <Bot size={12} className={msg.isError ? 'text-red-400' : 'text-white'} />
                                 </div>
                             )}
@@ -1099,7 +1099,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({
 
                 {isProcessing && (
                     <div className="flex gap-2">
-                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-pink-500 flex items-center justify-center">
+                        <div className="w-6 h-6 rounded-full bg-linear-to-br from-primary to-pink-500 flex items-center justify-center">
                             <Loader2 size={12} className="text-white animate-spin" />
                         </div>
                         <div className="px-3 py-2 bg-white/5 border border-white/10 rounded-xl rounded-bl-sm">
@@ -1204,7 +1204,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({
                         <button
                             type="submit"
                             disabled={!input.trim() && attachments.length === 0}
-                            className="px-3 py-2 bg-gradient-to-r from-primary to-pink-500 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-all"
+                            className="px-3 py-2 bg-linear-to-r from-primary to-pink-500 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-all"
                             title="Send message"
                         >
                             <Send size={14} />

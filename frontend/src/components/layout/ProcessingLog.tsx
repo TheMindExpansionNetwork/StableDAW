@@ -78,7 +78,7 @@ export const ProcessingLog: React.FC = () => {
   }, [entries, isOpen]);
 
   return (
-    <div className="border-t-2 border-purple-500/30 bg-[#0a080f] flex-shrink-0 flex flex-col">
+    <div className="border-t-2 border-purple-500/30 bg-[#0a080f] shrink-0 flex flex-col">
       {/* Header — ALWAYS visible. Click anywhere on it to toggle. */}
       <button
         type="button"

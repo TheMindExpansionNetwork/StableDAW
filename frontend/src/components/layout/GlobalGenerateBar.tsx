@@ -84,7 +84,7 @@ export const GlobalGenerateBar: React.FC = () => {
   return (
     <button
       onClick={handleClick}
-      className={`relative w-full overflow-hidden font-black uppercase tracking-widest text-[12px] flex items-center justify-center gap-2 transition-colors flex-shrink-0 ${
+      className={`relative w-full overflow-hidden font-black uppercase tracking-widest text-[12px] flex items-center justify-center gap-2 transition-colors shrink-0 ${
         isGenerating
           ? 'bg-red-600/30 border-t border-red-500/50 text-red-300 hover:bg-red-600/50'
           : 'bg-purple-600 hover:bg-purple-500 text-white'

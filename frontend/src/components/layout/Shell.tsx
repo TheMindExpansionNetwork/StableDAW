@@ -65,6 +65,52 @@ export const Shell: React.FC = () => {
       className="flex flex-col w-full bg-[#07050a] text-[#f5f3ff] overflow-hidden font-sans dense-layout"
       style={{ height: 'calc((100vh - 5rem) / var(--layout-zoom))' }}
     >
+      {/* Full-width header — spans entire window including over the left panel */}
+      <header className="h-10 border-b border-white/5 flex items-center justify-between px-6 bg-[#0a080f]/80 backdrop-blur-md z-10 shrink-0 relative">
+        {/* Centered App Name */}
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+          <span className="font-semibold text-[15px] font-sans text-zinc-100 tracking-wide">StableDAW</span>
+        </div>
+        <div className="flex items-center gap-6 relative z-10">
+          <h2 className="text-[10px] font-black uppercase tracking-[0.4em] flex items-center gap-2.5">
+            {isLeftPanelOpen ? (
+              <button onClick={() => setIsLeftPanelOpen(false)} className="p-1 hover:bg-white/10 rounded mr-1 pointer-events-auto" title="Collapse left panel">
+                <ChevronRight className="w-4 h-4 text-zinc-500 hover:text-white transition-colors rotate-180" />
+              </button>
+            ) : (
+              <button onClick={() => setIsLeftPanelOpen(true)} className="p-1 hover:bg-white/10 rounded mr-1 pointer-events-auto" title="Open left panel">
+                <ChevronRight className="w-4 h-4 text-zinc-500 hover:text-white transition-colors" />
+              </button>
+            )}
+            <span className="w-1.5 h-1.5 rounded-full bg-purple-500 shadow-[0_0_8px_rgba(139,92,246,1)]" />
+          </h2>
+          <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 bg-white/5 rounded-full border border-white/5">
+            <Search className="w-3 h-3 text-zinc-600" />
+            <input type="text" placeholder="G-SEARCH..." className="bg-transparent border-none outline-none text-[9px] text-zinc-500 w-32 font-mono" />
+          </div>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={() => setDocsOpen(true)}
+              className="p-1.5 rounded hover:bg-purple-500/15 transition-colors border border-purple-500/20 group flex items-center gap-1.5"
+              title="Open documentation"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-purple-300 group-hover:text-purple-200" />
+              <span className="text-[9px] font-black uppercase tracking-widest text-purple-300 group-hover:text-purple-200 pr-1">Docs</span>
+            </button>
+            <button className="p-1.5 rounded hover:bg-white/5 transition-colors border border-white/5 group">
+              <Settings className="w-3.5 h-3.5 text-zinc-500 group-hover:rotate-90 transition-transform duration-500" />
+            </button>
+            <div className="flex items-center gap-2.5 pl-2 border-l border-white/5">
+              <div className="w-7 h-7 rounded bg-linear-to-tr from-purple-500 to-indigo-600 border border-white/20 p-0.5 shadow-xl">
+                <div className="w-full h-full rounded bg-[#0a080f] flex items-center justify-center font-bold text-[10px]">U</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
       <div className="flex-1 flex min-h-0 overflow-hidden">
       {/* Left Panel */}
       <ResizablePanel
@@ -77,15 +123,8 @@ export const Shell: React.FC = () => {
       >
         <div className="h-full flex flex-col bg-[#07050a] relative">
           
-          {/* Header & Tabs */}
-          <div className="flex flex-col border-b border-white/5 pt-3 pb-0 px-3 bg-[#0a080f]">
-            {/* Top utility row — keeps the collapse chevron without the logo block */}
-            <div className="flex items-center justify-end mb-2">
-              <button onClick={() => setIsLeftPanelOpen(false)} className="p-1 hover:bg-white/10 rounded text-zinc-500 hover:text-white transition-colors" title="Collapse left panel">
-                <ChevronRight className="w-4 h-4 rotate-180" />
-              </button>
-            </div>
-
+          {/* Tabs */}
+          <div className="flex flex-col border-b border-white/5 pt-2 pb-0 px-3 bg-[#0a080f]">
             {/* Horizontal Tabs */}
             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar mb-2 px-1">
               {tabs.map((tab) => (
@@ -131,52 +170,6 @@ export const Shell: React.FC = () => {
 
       {/* Main Canvas (DAW Center Panel) */}
       <main className="flex-1 h-full overflow-hidden flex flex-col relative bg-[#110e1a]/60">
-        <header className="h-10 border-b border-white/5 flex items-center justify-between px-6 bg-[#0a080f]/80 backdrop-blur-md z-20 shrink-0 relative">
-          
-          {/* Centered App Name */}
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-            <span className="font-semibold text-[15px] font-sans text-zinc-100 tracking-wide">
-              StableDAW
-            </span>
-          </div>
-
-          <div className="flex items-center gap-6 relative z-10">
-            <h2 className="text-[10px] font-black uppercase tracking-[0.4em] flex items-center gap-2.5">
-              {!isLeftPanelOpen && (
-                <button onClick={() => setIsLeftPanelOpen(true)} className="p-1 hover:bg-white/10 rounded mr-1 pointer-events-auto" title="Open left panel">
-                   <ChevronRight className="w-4 h-4 text-zinc-500 hover:text-white transition-colors" />
-                </button>
-              )}
-              <span className="w-1.5 h-1.5 rounded-full bg-purple-500 shadow-[0_0_8px_rgba(139,92,246,1)]" />
-            </h2>
-            <div className="hidden sm:flex items-center gap-2 px-2.5 py-1 bg-white/5 rounded-full border border-white/5">
-               <Search className="w-3 h-3 text-zinc-600" />
-               <input type="text" placeholder="G-SEARCH..." className="bg-transparent border-none outline-none text-[9px] text-zinc-500 w-32 font-mono" />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2.5">
-               <button
-                 onClick={() => setDocsOpen(true)}
-                 className="p-1.5 rounded hover:bg-purple-500/15 transition-colors border border-purple-500/20 group flex items-center gap-1.5"
-                 title="Open documentation"
-               >
-                  <BookOpen className="w-3.5 h-3.5 text-purple-300 group-hover:text-purple-200" />
-                  <span className="text-[9px] font-black uppercase tracking-widest text-purple-300 group-hover:text-purple-200 pr-1">Docs</span>
-               </button>
-               <button className="p-1.5 rounded hover:bg-white/5 transition-colors border border-white/5 group">
-                  <Settings className="w-3.5 h-3.5 text-zinc-500 group-hover:rotate-90 transition-transform duration-500" />
-               </button>
-               <div className="flex items-center gap-2.5 pl-2 border-l border-white/5">
-                  <div className="w-7 h-7 rounded bg-linear-to-tr from-purple-500 to-indigo-600 border border-white/20 p-0.5 shadow-xl">
-                     <div className="w-full h-full rounded bg-[#0a080f] flex items-center justify-center font-bold text-[10px]">U</div>
-                  </div>
-               </div>
-            </div>
-          </div>
-        </header>
-
         <DAWCenterPanel onSwitchTab={(tab) => setActiveView(tab)} />
       </main>
       </div>

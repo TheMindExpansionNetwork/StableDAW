@@ -56,7 +56,7 @@ export const TrainingView: React.FC = () => {
   return (
     <div className="flex flex-col gap-2 h-full text-[11px] pb-4 px-2 pt-2">
       
-      <Section title="TARGET ARCHITECTURE" icon={Layers} defaultOpen={true} rightNode={<span className="mono-tag !bg-blue-600/20 !border-blue-500/30 !text-blue-300">L4-ACCEL</span>}>
+      <Section title="TARGET ARCHITECTURE" icon={Layers} defaultOpen={true} rightNode={<span className="mono-tag bg-blue-600/20! border-blue-500/30! text-blue-300!">L4-ACCEL</span>}>
          <div className="flex flex-col gap-3">
              <div className="flex flex-col gap-1">
                 <label className="mono-label">New Lora Identity</label>

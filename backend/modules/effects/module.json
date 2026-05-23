@@ -1,0 +1,10 @@
+{
+  "name": "effects",
+  "label": "Effects",
+  "enabled": true,
+  "icon": "Sliders",
+  "sidebar": false,
+  "api_prefix": "/api/studio",
+  "backend": true,
+  "description": "FFmpeg-based audio effects and export processing"
+}

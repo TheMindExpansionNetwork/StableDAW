@@ -166,8 +166,29 @@ When the selected provider is Claude Code, you are not only a chat assistant. Yo
 - Keep the user informed about major tool activity, but do not ask permission for routine diagnostics or fixes.
 """
 
-CLAUDE_CMD = r"C:\Users\skream\AppData\Roaming\npm\claude.cmd"
-PROJECT_CWD = r"C:\Users\skream\projects\StableDAW"
+
+def _find_claude_cmd() -> str:
+    """Auto-detect the Claude Code CLI binary from PATH or common install locations."""
+    env_override = os.environ.get("CLAUDE_CODE_PATH", "").strip()
+    if env_override and Path(env_override).exists():
+        return env_override
+    import shutil
+    import sys
+
+    candidates = ["claude.cmd", "claude"] if sys.platform == "win32" else ["claude"]
+    for name in candidates:
+        found = shutil.which(name)
+        if found:
+            return found
+    if sys.platform == "win32":
+        npm_path = Path(os.environ.get("APPDATA", "")) / "npm" / "claude.cmd"
+        if npm_path.exists():
+            return str(npm_path)
+    return "claude.cmd" if __import__("sys").platform == "win32" else "claude"
+
+
+CLAUDE_CMD = _find_claude_cmd()
+PROJECT_CWD = str(Path(__file__).resolve().parent.parent)
 STABLE_AUDIO_SKILL_NAME = "stable-audio-3-mastery"
 STABLE_AUDIO_SKILL_PATH = (
     Path(PROJECT_CWD) / ".claude" / "skills" / STABLE_AUDIO_SKILL_NAME / "SKILL.md"

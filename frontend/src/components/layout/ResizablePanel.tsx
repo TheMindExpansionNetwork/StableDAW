@@ -73,7 +73,7 @@ export const ResizablePanel: React.FC<ResizablePanelProps> = ({
           className={`h-full flex flex-col bg-[#0d0b16] border-white/5 relative shadow-2xl z-20 ${position === 'left' ? 'border-r' : 'border-l'}`}
         >
           {title && (
-            <div className="h-10 border-b border-white/5 flex items-center justify-between px-3 bg-black/20 flex-shrink-0">
+            <div className="h-10 border-b border-white/5 flex items-center justify-between px-3 bg-black/20 shrink-0">
               <span className="text-[10px] font-black uppercase tracking-widest text-zinc-300">{title}</span>
               {onToggle && (
                  <button onClick={onToggle} className="p-1 hover:bg-white/10 rounded text-zinc-500 hover:text-white transition-colors">

@@ -14,7 +14,8 @@ A research and production platform for high-quality, text-conditioned audio gene
 |---|---|---|
 | **Upstream ML pipeline** | `stable_audio_3/` | DiT diffusion transformer, SAME autoencoder, all samplers, LoRA training and inference, distribution-shift schedules. |
 | **FastAPI backend** | `backend/server.py` | Async HTTP wrapper. Manages a job queue for generation, synchronous FFmpeg-based audio processing, model introspection endpoints. Binds to port 8600. |
-| **StableDAW React UI** | `frontend/` | React 19 + Vite 6 + Tailwind 4 + Zustand 5. Browser-based DAW with multi-track editor, step sequencer, piano roll, persistent library, and real-time spectral analyzer. Proxies `/api/*` to the backend. Runs on port 5173 in development. |
+| **Backend modules** | `backend/modules/` | Plugin system. Each subdirectory contains `module.json` (metadata, enabled flag, API prefix) and `router.py` (FastAPI APIRouter). The loader mounts all enabled modules at startup; failures are non-fatal. Currently ships the `effects` module (mounted at `/api/studio`). |
+| **StableDAW React UI** | `frontend/` | React 19 + Vite 6 + Tailwind 4 + Zustand 5. Browser-based DAW with multi-track editor, step sequencer, piano roll, persistent library, real-time spectral analyzer, and AI assistant panel. Proxies `/api/*` to the backend. Runs on port 5173 in development. |
 | **Gradio UI (legacy)** | `run_gradio.py`, `stable_audio_3/interface/` | Upstream Gradio interface. Functional for direct pipeline access; StableDAW supersedes it for daily use. |
 
 ---
@@ -42,17 +43,20 @@ cd frontend && npm run dev
 ### Dependencies
 
 ```bash
-# Python
+# Python (Windows: installs CUDA 12.8 torch and Flash Attention automatically)
 uv sync
-
-# Optional Linux CUDA wheels for Medium model, if you need a specific CUDA build
-uv pip install torch==2.7.1 torchaudio==2.7.1 --index-url https://download.pytorch.org/whl/cu126
 
 # Frontend
 cd frontend && npm install
 ```
 
-See [§3 of the User Guide](docs/USER_GUIDE.md#3-installation) for Windows CUDA, Flash Attention, and soundfile specifics.
+On Windows, `pyproject.toml` includes CUDA 12.8 wheel sources for torch and torchaudio, plus the pre-built Flash Attention wheel for Python 3.10. `uv sync` installs all of them without additional flags. On Linux, install the appropriate CUDA wheel index manually if the default does not match your CUDA version:
+
+```bash
+uv pip install torch==2.7.1 torchaudio==2.7.1 --index-url https://download.pytorch.org/whl/cu126
+```
+
+See [§3 of the User Guide](docs/USER_GUIDE.md#3-installation) for full installation details.
 
 ---
 
@@ -218,9 +222,18 @@ See [docs/workflows/autoencoder.md](docs/workflows/autoencoder.md) for batch enc
 ### Processing Log
 - Ring buffer of up to 500 entries, auto-scrolling to the latest.
 - Sources: `system`, `health`, `generate`, `training`, `studio`, `sequencer`, `library`.
-- Severity levels: info, warn, error, debug — each with a distinct color indicator.
+- Severity levels: info, warn, error, debug, each with a distinct color indicator.
 - Download exports the full buffer as a timestamped `.txt` file. Clear wipes the buffer.
 - Collapse/expand by clicking the header bar.
+
+### AI Assistant Panel
+- Collapsible orb panel accessible from the header bar. Streams chat completions from any configured provider.
+- Supported providers: Claude Code (CLI, no key required), Google Gemini, Anthropic, OpenAI, xAI Grok, Groq, OpenRouter (free and paid tiers), Ollama, LM Studio, llama.cpp, vLLM.
+- Provider and model selection with live model discovery from each provider's API.
+- Key pool: multiple API keys per provider for load distribution and failover. Keys are hashed for display; the backend selects the next available key per request.
+- RAG context: USER_GUIDE.md is chunked and indexed at startup via ChromaDB and sentence-transformers. Relevant sections are injected into the system prompt for each chat turn. `/api/assistant/reindex` triggers a forced reindex.
+- Streaming responses over SSE via `POST /api/assistant/chat`. Conversation history is maintained client-side and sent with each request.
+- Attachment support: audio files and images can be attached to messages; supported providers receive them as base64-encoded content blocks.
 
 ---
 

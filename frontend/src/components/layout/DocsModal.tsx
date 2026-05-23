@@ -127,7 +127,7 @@ export const DocsModal: React.FC<DocsModalProps> = ({ open, onClose }) => {
 
   return (
     <div
-      className="docs-modal-root fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      className="docs-modal-root fixed inset-0 z-100 flex items-center justify-center bg-black/80 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
@@ -135,9 +135,9 @@ export const DocsModal: React.FC<DocsModalProps> = ({ open, onClose }) => {
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="docs-modal-header flex items-center justify-between border-b border-white/10 px-4 py-2.5 bg-gradient-to-r from-purple-900/30 to-indigo-900/20 flex-shrink-0">
+        <div className="docs-modal-header flex items-center justify-between border-b border-white/10 px-4 py-2.5 bg-linear-to-r from-purple-900/30 to-indigo-900/20 shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-6 h-6 rounded bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center">
+            <div className="w-6 h-6 rounded bg-linear-to-br from-purple-600 to-indigo-600 flex items-center justify-center">
               <BookOpen className="w-3.5 h-3.5 text-white" />
             </div>
             <div className="flex flex-col leading-tight">
@@ -175,8 +175,8 @@ export const DocsModal: React.FC<DocsModalProps> = ({ open, onClose }) => {
 
         {/* Body: sidebar TOC + scrollable content */}
         <div className="flex-1 min-h-0 flex">
-          <aside className="docs-modal-toc w-[260px] flex-shrink-0 border-r border-white/10 bg-black/40 flex flex-col">
-            <div className="px-3 pt-3 pb-2 flex-shrink-0">
+          <aside className="docs-modal-toc w-65 shrink-0 border-r border-white/10 bg-black/40 flex flex-col">
+            <div className="px-3 pt-3 pb-2 shrink-0">
               <div className="relative">
                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-600" />
                 <input
@@ -208,7 +208,7 @@ export const DocsModal: React.FC<DocsModalProps> = ({ open, onClose }) => {
                 ))
               )}
             </nav>
-            <div className="px-3 py-2 border-t border-white/10 flex-shrink-0">
+            <div className="px-3 py-2 border-t border-white/10 shrink-0">
               <a
                 href="/USER_GUIDE.md"
                 target="_blank"
@@ -223,7 +223,7 @@ export const DocsModal: React.FC<DocsModalProps> = ({ open, onClose }) => {
             <div
               ref={contentRef}
               onClick={handleContentClick}
-              className="docs-content max-w-[800px] mx-auto px-8 py-6"
+              className="docs-content max-w-200 mx-auto px-8 py-6"
             >
               {loading && <p className="text-zinc-500 italic">Loading user guide…</p>}
               {error && (
@@ -338,12 +338,15 @@ export const DocsModal: React.FC<DocsModalProps> = ({ open, onClose }) => {
         .docs-content .docs-content > p:first-child { margin-top: 0; }
 
         @media print {
+          /* Force white background on everything — overrides Chrome's "background graphics" behaviour. */
+          html, body { background: white !important; background-image: none !important; }
           /* Hide everything except the docs content. */
           body * { visibility: hidden !important; }
           .docs-modal-root, .docs-modal-root * { visibility: visible !important; }
           .docs-modal-root {
             position: static !important;
             background: white !important;
+            background-image: none !important;
             backdrop-filter: none !important;
             display: block !important;
             height: auto !important;
@@ -354,21 +357,29 @@ export const DocsModal: React.FC<DocsModalProps> = ({ open, onClose }) => {
             height: auto !important;
             max-width: 100% !important;
             background: white !important;
+            background-image: none !important;
             border: none !important;
             box-shadow: none !important;
             border-radius: 0 !important;
             display: block !important;
           }
+          .docs-modal-window > div { display: block !important; }
           .docs-modal-header, .docs-modal-toc { display: none !important; }
-          .docs-content { max-width: 100% !important; padding: 0 !important; color: black !important; }
-          .docs-content * { color: black !important; }
-          .docs-content .docs-h-1 { border-bottom-color: black !important; }
+          .docs-modal-window main {
+            background: white !important;
+            background-image: none !important;
+            overflow: visible !important;
+          }
+          .docs-content { max-width: 100% !important; padding: 0 !important; color: black !important; background: white !important; }
+          .docs-content * { color: black !important; background-color: transparent !important; }
+          .docs-content .docs-h-1 { border-bottom-color: #7c3aed !important; }
           .docs-content blockquote { background: #f3f0ff !important; border-left-color: #7c3aed !important; }
-          .docs-content blockquote * { color: #4c1d95 !important; }
-          .docs-content .docs-code { background: #f5f3ff !important; border-color: #ddd !important; color: #1a1a1a !important; }
+          .docs-content blockquote * { color: #4c1d95 !important; background-color: #f3f0ff !important; }
+          .docs-content .docs-code { background: #f5f3ff !important; border: 1px solid #ddd !important; color: #1a1a1a !important; }
           .docs-content .docs-inline-code { background: #ede9fe !important; color: #4c1d95 !important; }
           .docs-content th { background: #ede9fe !important; color: #4c1d95 !important; }
           .docs-content tr:nth-child(2n) td { background: #faf5ff !important; }
+          .docs-content td { border-color: #e0d9f7 !important; }
           .docs-content a { color: #6d28d9 !important; }
           @page { margin: 0.7in; size: letter; }
         }
