@@ -291,14 +291,15 @@ export const useTrainingStore = create<TrainingStoreState>()((set, get) => ({
       return;
     }
 
-    if (!payload.latents_base64) {
+    const encodePayload = payload as { latents_base64?: string } | null;
+    if (!encodePayload?.latents_base64) {
       const message = 'Encode completed without latents payload.';
       set({ error: message });
       useStatusBarStore.getState().setText(`AUTOENCODE FAILED: ${message}`);
       return;
     }
 
-    set({ encodedLatentsBase64: payload.latents_base64, error: null });
+    set({ encodedLatentsBase64: encodePayload.latents_base64, error: null });
     useStatusBarStore.getState().setText('AUTOENCODE COMPLETE');
   },
 

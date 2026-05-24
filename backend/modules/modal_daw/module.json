@@ -1,0 +1,8 @@
+{
+  "name": "modal_daw",
+  "display_name": "Modal DAW Bridge",
+  "description": "Fail-closed status and plan endpoints for routing heavyweight StableDAW generation/inpainting/training jobs to Modal GPU workers.",
+  "enabled": true,
+  "api_prefix": "/api/modal-daw",
+  "version": "0.1.0"
+}

@@ -22,6 +22,20 @@ A research and production platform for high-quality, text-conditioned audio gene
 
 ## Quick Start
 
+### Modal GPU bridge in this fork
+
+This fork adds a fail-closed Modal DAW bridge scaffold for routing heavy generation/inpainting/training jobs to scale-to-zero GPU workers while keeping the browser DAW local and responsive. See [docs/integrations/MODAL_REALTIME_DAW.md](docs/integrations/MODAL_REALTIME_DAW.md).
+
+Safe local status endpoints:
+
+```bash
+uv run uvicorn backend.server:app --host 0.0.0.0 --port 8600 --reload
+curl http://localhost:8600/api/modal-daw/status
+curl http://localhost:8600/api/modal-daw/preflight
+```
+
+These endpoints are plan/status only by default: no Modal network call, GPU start, private-audio upload, recording, or stream publishing.
+
 ### Launch (Windows one-shot)
 
 ```powershell
