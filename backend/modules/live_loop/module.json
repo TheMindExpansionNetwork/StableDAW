@@ -1,0 +1,8 @@
+{
+  "name": "live_loop",
+  "display_name": "Live Loop Room Bus",
+  "description": "Fail-closed bus/status endpoints for browser-local live looping, Elementary Audio DSP, and async music-model return lanes.",
+  "enabled": true,
+  "api_prefix": "/api/live-loop",
+  "version": "0.1.0"
+}

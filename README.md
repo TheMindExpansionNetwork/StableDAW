@@ -22,9 +22,11 @@ A research and production platform for high-quality, text-conditioned audio gene
 
 ## Quick Start
 
-### Modal GPU bridge in this fork
+### Modal GPU bridge + live-loop add-ons in this fork
 
 This fork adds a fail-closed Modal DAW bridge scaffold for routing heavy generation/inpainting/training jobs to scale-to-zero GPU workers while keeping the browser DAW local and responsive. See [docs/integrations/MODAL_REALTIME_DAW.md](docs/integrations/MODAL_REALTIME_DAW.md).
+
+It also adds a live-looping integration plan around **Elementary Audio** for browser-local DSP/loop-bank response and **ACE-Step** as an async Modal next-phrase model lane. See [docs/integrations/LIVE_LOOP_ELEMENTARY_ACE_STEP.md](docs/integrations/LIVE_LOOP_ELEMENTARY_ACE_STEP.md).
 
 Safe local status endpoints:
 
@@ -32,6 +34,8 @@ Safe local status endpoints:
 uv run uvicorn backend.server:app --host 0.0.0.0 --port 8600 --reload
 curl http://localhost:8600/api/modal-daw/status
 curl http://localhost:8600/api/modal-daw/preflight
+curl http://localhost:8600/api/live-loop/status
+curl http://localhost:8600/api/live-loop/bus-plan
 ```
 
 These endpoints are plan/status only by default: no Modal network call, GPU start, private-audio upload, recording, or stream publishing.

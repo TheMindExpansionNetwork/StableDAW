@@ -1,0 +1,118 @@
+{
+  "status": "offline_live_loop_smoke_verified",
+  "truth_label": "deterministic synthetic bus simulation; not a live WebRTC room and not a real ACE-Step GPU render",
+  "framework_added": "Elementary Audio",
+  "model_lane_added": "ACE-Step async next phrase via Modal contract",
+  "sample_rate": 44100,
+  "buses": [
+    "room_input_bus",
+    "elementary_dsp_loop_bus",
+    "ai_return_bus",
+    "stream_monitor_bus"
+  ],
+  "events": [
+    {
+      "start": 0,
+      "end": 8,
+      "bus": "room_input_bus",
+      "event": "human establishes loop"
+    },
+    {
+      "start": 8,
+      "end": 16,
+      "bus": "ai_return_bus",
+      "event": "elementary_loopbank_bright_answer"
+    },
+    {
+      "start": 8,
+      "end": 16,
+      "bus": "elementary_dsp_loop_bus",
+      "event": "local low-latency loop-bank answer"
+    },
+    {
+      "start": 20,
+      "end": 32,
+      "bus": "ai_return_bus",
+      "event": "ace_step_next_phrase_async_return"
+    },
+    {
+      "start": 20,
+      "end": 32,
+      "bus": "modal_ace_step_next_phrase_worker",
+      "event": "async next phrase returned to ai bus"
+    },
+    {
+      "start": 36,
+      "end": 44,
+      "bus": "ai_return_bus",
+      "event": "elementary_filtered_delay_answer"
+    },
+    {
+      "start": 48,
+      "end": 60,
+      "bus": "ai_return_bus",
+      "event": "ace_step_next_phrase_async_return_2"
+    },
+    {
+      "start": 48,
+      "end": 60,
+      "bus": "modal_ace_step_next_phrase_worker",
+      "event": "second async refill returned"
+    }
+  ],
+  "artifacts": [
+    {
+      "file": "docs/assets/audio/live-loop-elementary-ace-test/01_room_input_bus.wav",
+      "duration_seconds": 64.0,
+      "sample_rate": 44100,
+      "rms": 0.097292,
+      "peak": 0.371761,
+      "sha256": "e6df9e34f361802a09eeaf9dc7ab650fb9745f4b102ca1a27522d497dcedc1fc",
+      "mp3_file": "docs/assets/audio/live-loop-elementary-ace-test/01_room_input_bus.mp3",
+      "mp3_sha256": "1adc1d8a41066f3b5856357563986838e460819d64e3f69ad4e2c461ca187343",
+      "mp3_bytes": 1537296
+    },
+    {
+      "file": "docs/assets/audio/live-loop-elementary-ace-test/02_ai_return_bus.wav",
+      "duration_seconds": 64.0,
+      "sample_rate": 44100,
+      "rms": 0.036964,
+      "peak": 0.138579,
+      "sha256": "f698d301814d2c1526abad710ebbd039e9fca805147d8fb8b5b3ffbaa132cdbb",
+      "mp3_file": "docs/assets/audio/live-loop-elementary-ace-test/02_ai_return_bus.mp3",
+      "mp3_sha256": "8b69a1fd9963a5057d29e58f432501de580267aa2526dc7e22672b2c47cb3a12",
+      "mp3_bytes": 1537296
+    },
+    {
+      "file": "docs/assets/audio/live-loop-elementary-ace-test/03_stream_monitor_mix.wav",
+      "duration_seconds": 64.0,
+      "sample_rate": 44100,
+      "rms": 0.085794,
+      "peak": 0.351787,
+      "sha256": "932c25bc7c88240df00cbd8feecc8d61311b3bc3e9723736e17b2b5a97a5a91e",
+      "mp3_file": "docs/assets/audio/live-loop-elementary-ace-test/03_stream_monitor_mix.mp3",
+      "mp3_sha256": "08e244d5e0fce56b36b39ce65c6fb938c17ca8958d71da86c5d4d24fb23f190e",
+      "mp3_bytes": 1537296
+    },
+    {
+      "file": "docs/assets/audio/live-loop-elementary-ace-test/04_fast_window_playable_feedback_sketch.wav",
+      "duration_seconds": 16.0,
+      "sample_rate": 44100,
+      "rms": 0.046401,
+      "peak": 0.338032,
+      "sha256": "cb06ba5d2e3b1302a3fc52adaeb2c59dde3258bc68721a7c8f49131db5403faf",
+      "mp3_file": "docs/assets/audio/live-loop-elementary-ace-test/04_fast_window_playable_feedback_sketch.mp3",
+      "mp3_sha256": "cdd344891cb5bebd6175f8f1342326e1ac412f775d3dba54747364f28f60c0e6",
+      "mp3_bytes": 385610
+    }
+  ],
+  "analyzer_csv": "docs/assets/audio/live-loop-elementary-ace-test/analyzer_windows.csv",
+  "fail_closed_flags": {
+    "starts_gpu": false,
+    "starts_paid_api": false,
+    "opens_microphone": false,
+    "records_audio": false,
+    "uploads_private_media": false,
+    "publishes_stream": false
+  }
+}
